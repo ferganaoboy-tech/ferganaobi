@@ -30,15 +30,11 @@ exports.approveSubscriber = async (req, res) => {
 
     const bot = getBotInstance();
     if (bot) {
-      try {
-        bot.sendMessage(
-          sub.chatId,
-          "🎉 <b>Ajoyib yangilik!</b>\n\nSizning arizangiz admin tomonidan tasdiqlandi. Endi barcha xabarnomalar sizga yetib keladi.",
-          { parse_mode: 'HTML' }
-        );
-      } catch (err) {
-        console.error("Bot mesaj yuborishda xatolik:", err.message);
-      }
+      bot.sendMessage(
+        sub.chatId,
+        "🎉 <b>Ajoyib yangilik!</b>\n\nSizning arizangiz admin tomonidan tasdiqlandi. Endi barcha xabarnomalar sizga yetib keladi.",
+        { parse_mode: 'HTML' }
+      ).catch(err => console.error("Bot mesaj yuborishda xatolik:", err.message));
     }
 
     res.status(200).json({ success: true, data: sub });
@@ -60,15 +56,11 @@ exports.rejectSubscriber = async (req, res) => {
 
     const bot = getBotInstance();
     if (bot) {
-      try {
-        bot.sendMessage(
-          sub.chatId,
-          "⛔ <b>Kechirasiz!</b>\n\nSizning arizangiz yoki botdan foydalanish huquqingiz admin tomonidan bekor qilindi.",
-          { parse_mode: 'HTML' }
-        );
-      } catch (err) {
-        console.error("Bot mesaj yuborishda xatolik:", err.message);
-      }
+      bot.sendMessage(
+        sub.chatId,
+        "⛔ <b>Kechirasiz!</b>\n\nSizning arizangiz yoki botdan foydalanish huquqingiz admin tomonidan bekor qilindi.",
+        { parse_mode: 'HTML' }
+      ).catch(err => console.error("Bot mesaj yuborishda xatolik:", err.message));
     }
 
     res.status(200).json({ success: true, message: "Obunachi o'chirildi" });

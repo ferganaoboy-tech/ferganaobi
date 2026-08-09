@@ -351,14 +351,10 @@ app.post('/api/telegram-webhook', async (req, res) => {
 // Error Handling Middleware
 app.use(errorHandler);
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections (Log only, don't crash the server for things like Telegram message failures)
 process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error('UNHANDLED REJECTION! 💥 (Not shutting down)');
   console.error(err.name, err.message);
-  // Give server time to finish requests
-  httpServer.close(() => {
-    process.exit(1);
-  });
 });
 
 process.on('uncaughtException', (err) => {
