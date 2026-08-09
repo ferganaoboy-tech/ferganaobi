@@ -83,7 +83,7 @@ const initTelegramListener = async (io) => {
     // ─── /start — Obunachi ro'yxatdan o'tish (PENDING → admin tasdiqlaydi) ─
     bot.onText(/\/start/, async (msg) => {
       const chatId = msg.chat.id.toString();
-      const firstName = msg.chat.first_name || '';
+      const firstName = msg.chat.first_name || msg.chat.title || 'Nomsiz';
       const username = msg.chat.username || '';
 
       try {
