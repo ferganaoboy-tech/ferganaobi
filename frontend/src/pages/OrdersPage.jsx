@@ -76,9 +76,6 @@ const OrdersPage = () => {
           
           {/* Title Area */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-accent flex items-center justify-center text-inverse shadow-lg shadow-accent/30 shrink-0">
-              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
             <div className="flex flex-col">
               <h1 className="text-[20px] sm:text-[24px] md:text-[28px] font-[800] tracking-tight text-primary leading-none">
                 Buyurtmalar
@@ -122,29 +119,29 @@ const OrdersPage = () => {
               ))}
             </div>
 
-            <div className="flex items-center gap-3 w-full xl:w-auto shrink-0 overflow-x-auto no-scrollbar pb-1 xl:pb-0">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto shrink-0 pb-1 xl:pb-0">
               {/* Date Range */}
-              <div className="flex items-center gap-2 bg-surface border border-subtle rounded-xl h-[38px] px-3 shadow-sm hover:border-accent/50 transition-colors shrink-0">
-                <Calendar className="w-4 h-4 text-tertiary" />
+              <div className="flex items-center justify-between sm:justify-start gap-2 bg-surface border border-subtle rounded-xl h-[38px] px-3 shadow-sm hover:border-accent/50 transition-colors w-full sm:w-auto shrink-0">
+                <Calendar className="w-4 h-4 text-tertiary shrink-0" />
                 <input 
                   type="date"
                   name="dateFrom"
                   value={filters.dateFrom || ''}
                   onChange={handleFilterChange}
-                  className="bg-transparent text-[13px] text-primary focus:outline-none w-[110px] cursor-pointer"
+                  className="bg-transparent text-[13px] text-primary focus:outline-none w-full sm:w-[110px] cursor-pointer text-center sm:text-left"
                 />
-                <span className="text-tertiary text-[12px] font-medium">-</span>
+                <span className="text-tertiary text-[12px] font-medium shrink-0">-</span>
                 <input 
                   type="date"
                   name="dateTo"
                   value={filters.dateTo || ''}
                   onChange={handleFilterChange}
-                  className="bg-transparent text-[13px] text-primary focus:outline-none w-[110px] cursor-pointer"
+                  className="bg-transparent text-[13px] text-primary focus:outline-none w-full sm:w-[110px] cursor-pointer text-center sm:text-left"
                 />
               </div>
 
               {/* Search Bar */}
-              <div className="relative w-[200px] sm:w-[250px] shrink-0">
+              <div className="relative w-full sm:w-[250px] shrink-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary" />
                 <input 
                   type="text" 
