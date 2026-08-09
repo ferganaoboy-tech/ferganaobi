@@ -342,7 +342,10 @@ const CartDrawer = () => {
                           <input
                             type="number"
                             value={item.quantity}
-                            onChange={(e) => updateCartQuantity(item.product, item.unit, parseInt(e.target.value) || 1)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateCartQuantity(item.product, item.unit, val === '' ? '' : parseInt(val) || 0);
+                            }}
                             className="w-10 h-full text-center text-[15px] bg-transparent border-0 outline-none text-primary font-[700] focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                           <button

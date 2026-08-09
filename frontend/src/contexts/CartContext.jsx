@@ -267,8 +267,9 @@ export const CartProvider = ({ children }) => {
       }
     });
 
-    const qty = Number(quantity);
-    const newQtyInRolls = calculateRolls(unit, qty, detail);
+    const qty = quantity === '' ? '' : Number(quantity);
+    const numericQty = qty === '' ? 0 : qty;
+    const newQtyInRolls = calculateRolls(unit, numericQty, detail);
     const totalNewRolls = otherRolls + newQtyInRolls;
 
     if (totalNewRolls > detail.quantity) {
