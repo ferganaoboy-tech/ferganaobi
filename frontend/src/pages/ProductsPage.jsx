@@ -90,7 +90,13 @@ const ProductsPage = () => {
 
   const handleQtyChange = (productId, val, maxVal) => {
     haptics.light();
-    const capped = Math.max(maxVal <= 0 ? 0 : 1, Math.min(val, maxVal));
+    let capped;
+    if (val === '') {
+      capped = '';
+    } else {
+      // still prevent negative, but allow 0 temporarily if they type it, or just limit to maxVal
+      capped = Math.max(0, Math.min(Number(val) || 0, maxVal));
+    }
     setCartQuantities(prev => ({
       ...prev,
       [productId]: capped

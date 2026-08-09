@@ -27,7 +27,8 @@ const ProductTableMobileRow = React.forwardRef(({
 }, ref) => {
   const mobileUnit = cartUnits[product._id] || product.unit || 'rulon';
   const mobileRemaining = getRemainingStock(product, mobileUnit);
-  const mobileQty = mobileRemaining <= 0 ? 0 : Math.min(cartQuantities[product._id] || 1, mobileRemaining);
+  const rawQty = cartQuantities[product._id];
+  const mobileQty = mobileRemaining <= 0 ? 0 : (rawQty !== undefined ? (rawQty === '' ? '' : Math.min(rawQty, mobileRemaining)) : 1);
   const mobileOutOfStock = (product.quantity || 0) <= 0;
   const mobileCartMax = !mobileOutOfStock && mobileRemaining <= 0;
 
@@ -142,13 +143,20 @@ const ProductTableMobileRow = React.forwardRef(({
           >
             <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
-          <span className="flex-1 text-center text-[13px] font-[700] text-primary font-mono select-none">
-            {mobileQty}
-          </span>
+          <input
+            type="number"
+            disabled={mobileRemaining <= 0}
+            value={mobileQty}
+            onChange={(e) => {
+              const val = e.target.value;
+              handleQtyChange(product._id, val === '' ? '' : parseInt(val) || 0, mobileRemaining);
+            }}
+            className="flex-1 w-full text-center text-[13px] font-[700] text-primary font-mono bg-transparent border-0 outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
           <button
             type="button"
-            disabled={mobileRemaining <= 0 || mobileQty >= mobileRemaining}
-            onClick={() => handleQtyChange(product._id, mobileQty + 1, mobileRemaining)}
+            disabled={mobileRemaining <= 0 || (mobileQty !== '' && mobileQty >= mobileRemaining)}
+            onClick={() => handleQtyChange(product._id, (parseInt(mobileQty) || 0) + 1, mobileRemaining)}
             className="w-8 h-full flex items-center justify-center text-secondary active:bg-subtle transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
@@ -160,7 +168,7 @@ const ProductTableMobileRow = React.forwardRef(({
           {user?.role !== 'superadmin' && String(product.warehouse?._id || product.warehouse) !== String(user?.warehouse?._id || user?.warehouse) ? (
             <button
               type="button"
-              disabled={mobileRemaining <= 0}
+              disabled={mobileRemaining <= 0 || mobileQty === '' || mobileQty <= 0}
               onClick={() => {
                 addToTransfer(product, mobileQty, mobileUnit);
                 haptics.light();
@@ -180,7 +188,7 @@ const ProductTableMobileRow = React.forwardRef(({
               {/* Boshqa filialga (Transfer) */}
               <button
                 type="button"
-                disabled={mobileRemaining <= 0}
+                disabled={mobileRemaining <= 0 || mobileQty === '' || mobileQty <= 0}
                 onClick={() => {
                   addToTransfer(product, mobileQty, mobileUnit);
                   haptics.light();
@@ -199,7 +207,7 @@ const ProductTableMobileRow = React.forwardRef(({
               {/* Savatga */}
               <button
                 type="button"
-                disabled={mobileRemaining <= 0}
+                disabled={mobileRemaining <= 0 || mobileQty === '' || mobileQty <= 0}
                 onClick={() => {
                   const quantity = mobileQty;
                   const unit = mobileUnit;

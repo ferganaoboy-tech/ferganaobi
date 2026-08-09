@@ -27,7 +27,8 @@ const ProductGridItem = React.forwardRef(({
 }, ref) => {
   const gridUnit = cartUnits[product._id] || product.unit || 'rulon';
   const gridRemaining = getRemainingStock(product, gridUnit);
-  const gridQty = gridRemaining <= 0 ? 0 : Math.min(cartQuantities[product._id] || 1, gridRemaining);
+  const rawQty = cartQuantities[product._id];
+  const gridQty = gridRemaining <= 0 ? 0 : (rawQty !== undefined ? (rawQty === '' ? '' : Math.min(rawQty, gridRemaining)) : 1);
   const gridOutOfStock = (product.quantity || 0) <= 0;
   const gridCartMax = !gridOutOfStock && gridRemaining <= 0;
 
@@ -128,8 +129,8 @@ const ProductGridItem = React.forwardRef(({
             <div className="flex items-center bg-white/20 backdrop-blur-md border border-white/10 rounded-lg sm:rounded-xl h-8 sm:h-10 p-0.5 sm:p-1 shrink-0">
               <button
                 type="button"
-                disabled={gridRemaining <= 0 || gridQty <= 1}
-                onClick={() => handleQtyChange(product._id, gridQty - 1, gridRemaining)}
+                disabled={gridRemaining <= 0 || gridQty === '' || gridQty <= 1}
+                onClick={() => handleQtyChange(product._id, (parseInt(gridQty) || 0) - 1, gridRemaining)}
                 className="w-6 sm:w-8 h-full flex items-center justify-center text-white disabled:opacity-30 active:scale-90 transition-transform"
               >
                 <Minus className="w-[12px] h-[12px] sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
@@ -138,13 +139,16 @@ const ProductGridItem = React.forwardRef(({
                 type="number"
                 disabled={gridRemaining <= 0}
                 value={gridQty}
-                onChange={(e) => handleQtyChange(product._id, parseInt(e.target.value) || 1, gridRemaining)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleQtyChange(product._id, val === '' ? '' : parseInt(val) || 0, gridRemaining);
+                }}
                 className="w-6 sm:w-8 h-full text-center text-[12px] sm:text-[14px] bg-transparent border-0 outline-none text-white font-[700] p-0"
               />
               <button
                 type="button"
-                disabled={gridRemaining <= 0 || gridQty >= gridRemaining}
-                onClick={() => handleQtyChange(product._id, gridQty + 1, gridRemaining)}
+                disabled={gridRemaining <= 0 || (gridQty !== '' && gridQty >= gridRemaining)}
+                onClick={() => handleQtyChange(product._id, (parseInt(gridQty) || 0) + 1, gridRemaining)}
                 className="w-6 sm:w-8 h-full flex items-center justify-center text-white disabled:opacity-30 active:scale-90 transition-transform"
               >
                 <Plus className="w-[12px] h-[12px] sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
@@ -311,8 +315,8 @@ const ProductGridItem = React.forwardRef(({
             <div className="flex flex-1 items-center justify-between bg-subtle/50 border border-subtle rounded-[8px] sm:rounded-[10px] h-8 sm:h-10 p-0.5 sm:p-1 shadow-inner select-none min-w-[90px]">
               <button
                 type="button"
-                disabled={gridRemaining <= 0 || gridQty <= 1}
-                onClick={() => handleQtyChange(product._id, gridQty - 1, gridRemaining)}
+                disabled={gridRemaining <= 0 || gridQty === '' || gridQty <= 1}
+                onClick={() => handleQtyChange(product._id, (parseInt(gridQty) || 0) - 1, gridRemaining)}
                 className="w-7 sm:w-8 shrink-0 h-full rounded-[6px] sm:rounded-[8px] flex items-center justify-center text-secondary hover:text-primary hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all duration-200 ease-out cursor-pointer bg-surface/50 border border-transparent hover:border-subtle hover:shadow-sm"
               >
                 <Minus className="w-3 h-3 sm:w-4 sm:h-4" strokeWidth={2.5} />
@@ -321,13 +325,16 @@ const ProductGridItem = React.forwardRef(({
                 type="number"
                 disabled={gridRemaining <= 0}
                 value={gridQty}
-                onChange={(e) => handleQtyChange(product._id, parseInt(e.target.value) || 1, gridRemaining)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleQtyChange(product._id, val === '' ? '' : parseInt(val) || 0, gridRemaining);
+                }}
                 className="w-6 sm:w-10 flex-1 h-full text-center text-[12px] sm:text-[14px] bg-transparent border-0 outline-none text-primary font-[600] font-mono focus:ring-0 disabled:opacity-40 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <button
                 type="button"
-                disabled={gridRemaining <= 0 || gridQty >= gridRemaining}
-                onClick={() => handleQtyChange(product._id, gridQty + 1, gridRemaining)}
+                disabled={gridRemaining <= 0 || (gridQty !== '' && gridQty >= gridRemaining)}
+                onClick={() => handleQtyChange(product._id, (parseInt(gridQty) || 0) + 1, gridRemaining)}
                 className="w-7 sm:w-8 shrink-0 h-full rounded-[6px] sm:rounded-[8px] flex items-center justify-center text-secondary hover:text-primary hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all cursor-pointer bg-surface/50 border border-transparent hover:border-subtle"
               >
                 <Plus className="w-3 h-3 sm:w-4 sm:h-4" strokeWidth={2.5} />
@@ -355,7 +362,7 @@ const ProductGridItem = React.forwardRef(({
             ) : (
             <button
               type="button"
-              disabled={gridRemaining <= 0}
+              disabled={gridRemaining <= 0 || gridQty === '' || gridQty <= 0}
               onClick={() => {
                 const quantity = gridQty;
                 const unit = gridUnit;
