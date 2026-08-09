@@ -144,6 +144,62 @@ const initTelegramListener = async (io) => {
       }
     });
 
+    // ─── Avtomatik ro'yxatdan o'tish (Guruhga qo'shilganda) ─────────────────
+    bot.on('message', async (msg) => {
+      // Agar bot guruhga qo'shilsa (admin qilib yoki oddiy)
+      if (msg.new_chat_members) {
+        try {
+          const botInfo = await bot.getMe();
+          const isBotAdded = msg.new_chat_members.some(member => member.id === botInfo.id);
+          
+          if (isBotAdded) {
+            const chatId = msg.chat.id.toString();
+            const firstName = msg.chat.title || msg.chat.first_name || 'Yangi Guruh';
+            const username = msg.chat.username || '';
+
+            let subscriber = await TelegramSubscriber.findOne({ chatId });
+
+            if (!subscriber) {
+              subscriber = new TelegramSubscriber({
+                chatId,
+                firstName,
+                username,
+                isActive: true,
+                isApproved: false
+              });
+              await subscriber.save();
+
+              bot.sendMessage(chatId, 
+                `Assalomu alaykum! 🤖\n\nUshbu guruh tizimga ulanish uchun avtomatik so'rov yubordi.\n⏳ <b>Admin ruxsat bergach</b>, Sklad operatsiyalari shu guruhga kelib tushadi.`,
+                { parse_mode: 'HTML' }
+              ).catch(err => console.error("Guruhga welcome xabar yuborishda xato:", err.message));
+
+              if (io) {
+                io.emit('telegram-subscribers-updated');
+              }
+              
+              if (ADMIN_CHAT_ID) {
+                bot.sendMessage(ADMIN_CHAT_ID,
+                  `🔔 <b>Yangi guruh ulanish talabi:</b>\n\n` +
+                  `👥 Guruh nomi: <b>${firstName}</b>\n` +
+                  `🆔 Chat ID: <code>${chatId}</code>\n\n` +
+                  `✅ Tasdiqlash: /approve ${chatId}\n` +
+                  `❌ Rad etish: /revoke ${chatId}`,
+                  { parse_mode: 'HTML' }
+                ).catch(() => {});
+              }
+            } else if (!subscriber.isActive) {
+              subscriber.isActive = true;
+              await subscriber.save();
+              bot.sendMessage(chatId, 'Guruh qayta aktivlashtirildi! ✅').catch(()=>{});
+            }
+          }
+        } catch (error) {
+          console.error("Guruhga qo'shilishda xatolik:", error);
+        }
+      }
+    });
+
     // ─── /stop — O'zini obunadan chiqarish ───────────────────────────────────
     bot.onText(/\/stop/, async (msg) => {
       const chatId = msg.chat.id.toString();
