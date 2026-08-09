@@ -41,7 +41,7 @@ const initTelegramListener = async (io) => {
   isInitializing = true;
 
   try {
-    const webhookUrl = process.env.WEBHOOK_URL || process.env.RENDER_EXTERNAL_URL || 'https://oboi.onrender.com';
+    const webhookUrl = process.env.WEBHOOK_URL || process.env.RENDER_EXTERNAL_URL || 'https://ferganaobi.onrender.com';
     const useWebhook = process.env.NODE_ENV === 'production';
 
     const bot = new TelegramBot(token, {
