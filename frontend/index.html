@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="shortcut icon" href="/logo.png" type="image/png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Fergana Oboi — professional oboy savdosi va ombor boshqaruv tizimi" />
+    <meta name="apple-mobile-web-app-title" content="Fergana Oboi" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+
+    <title>Fergana Oboi</title>
+    <style>
+      body {
+        margin: 0;
+        background-color: #f3f4f6; /* Fallback light background */
+      }
+      html.dark body {
+        background-color: #000000;
+      }
+      #initial-loader {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100vw;
+        background-color: #f8fafc;
+        color: #0f172a;
+        font-family: 'Space Grotesk', sans-serif;
+      }
+      html.dark #initial-loader {
+        background-color: #000000;
+        color: #ffffff;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(15, 23, 42, 0.1);
+        border-left-color: #0f172a;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      html.dark .spinner {
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-left-color: #ffffff;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      .loader-text {
+        font-size: 1rem;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div id="initial-loader">
+        <div class="spinner"></div>
+        <div class="loader-text">FERGANA OBOI</div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Initialize theme before app loads to prevent flicker
+      const theme =
+        localStorage.getItem("oboi-crm-theme") ||
+        (window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light");
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
+  </body>
+</html>

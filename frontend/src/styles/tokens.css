@@ -1,0 +1,89 @@
+:root {
+  --bg-app: #FAFAF9;
+  --bg-surface: #FFFFFF;
+  --bg-raised: #F5F4F2;
+  --bg-subtle: #F0EFED;
+  --bg-overlay: #FFFFFF;
+  --text-primary: #0F0F0E;
+  --text-secondary: #6B6966;
+  --text-tertiary: #9B9895;
+  --text-disabled: #C4C1BE;
+  --text-inverse: #FFFFFF;
+  --border-subtle: #E8E6E3;
+  --border-default: #D4D1CC;
+  --border-strong: #B8B5AF;
+  --border-focus: #0F0F0E;
+  --accent-primary: #1A1A1A;
+  --accent-hover: #2D2D2D;
+  
+  --state-success-bg: #F0FAF4;
+  --state-success-text: #166534;
+  --state-success-border: #BBF7D0;
+  
+  --state-warning-bg: #FFFBEB;
+  --state-warning-text: #92400E;
+  --state-warning-border: #FDE68A;
+  
+  --state-danger-bg: #FEF2F2;
+  --state-danger-text: #991B1B;
+  --state-danger-border: #FECACA;
+  
+  --state-info-bg: #F0F9FF;
+  --state-info-text: #075985;
+  --state-info-border: #BAE6FD;
+  
+  --state-neutral-bg: #F9F9F8;
+  --state-neutral-text: #374151;
+  --state-neutral-border: #E5E7EB;
+}
+
+.dark {
+  --bg-app: #111110;
+  --bg-surface: #1A1918;
+  --bg-raised: #211F1E;
+  --bg-subtle: #2A2826;
+  --bg-overlay: #1A1918;
+  --text-primary: #EFEDE8;
+  --text-secondary: #9B9693;
+  --text-tertiary: #6B6865;
+  --text-disabled: #3D3B39;
+  --text-inverse: #0F0F0E;
+  --border-subtle: #2D2B29;
+  --border-default: #3A3835;
+  --border-strong: #4D4A47;
+  --border-focus: #EFEDE8;
+  --accent-primary: #EFEDE8;
+  --accent-hover: #D4D1CC;
+  
+  --state-success-bg: #052E16;
+  --state-success-text: #86EFAC;
+  --state-success-border: #14532D;
+  
+  --state-warning-bg: #1C1400;
+  --state-warning-text: #FCD34D;
+  --state-warning-border: #78350F;
+  
+  --state-danger-bg: #1C0000;
+  --state-danger-text: #FCA5A5;
+  --state-danger-border: #7F1D1D;
+  
+  --state-info-bg: #0C1A2E;
+  --state-info-text: #7DD3FC;
+  --state-info-border: #0C4A6E;
+  
+  --state-neutral-bg: #1F1E1C;
+  --state-neutral-text: #D1D5DB;
+  --state-neutral-border: #374151;
+}
+
+*, *::before, *::after { 
+  box-sizing: border-box; 
+}
+
+
+
+body { 
+  font-family: 'Space Grotesk', sans-serif; 
+  background-color: var(--bg-app); 
+  color: var(--text-primary); 
+}

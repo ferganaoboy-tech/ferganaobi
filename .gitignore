@@ -1,0 +1,54 @@
+node_modules/
+
+# ─── Environment Variables (HECH QACHON commit qilinmasin) ──────────────────
+.env
+.env.*
+.env.local
+.env.*.local
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+*.env
+
+# ─── Test va Debug fayllar ───────────────────────────────────────────────────
+test-models.js
+check-users.js
+debugStats.js
+updateStats.js
+updateLegacyOrders.js
+backend/test-sdk.js
+backend/test-controller.js
+backend/test-create.js
+backend/test-gemini.js
+backend/debugStats.js
+backend/test-*.js
+backend/debug*.js
+backend/updateLegacy*.js
+backend/migrate-*.js
+backend/fixReturns.js
+
+# ─── Seed fayllar (production'da kerak emas) ─────────────────────────────────
+backend/seed.js
+backend/seed-admin.js
+backend/seedCashier.js
+backend/clean-db.js
+
+# ─── Build chiqishlari ────────────────────────────────────────────────────────
+frontend/dist/
+
+# ─── OS va IDE ────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+.vscode/
+.idea/
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
