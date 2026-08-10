@@ -22,46 +22,17 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
     setIsParsing(true);
     
     try {
-      // Bu yerda aslida ChatGPT yoki maxsus backend API ga so'rov ketadi.
-      // Biz hozir matnni qatorlarga bo'lib, miqdor va artikulni ajratamiz (Regex orqali mock NLP).
-      const lines = text.split('\n').filter(l => l.trim().length > 0);
-      let results = [];
+      const res = await axios.post('/api/products/parse-order', { text });
       
-      for (const line of lines) {
-        // Miqdorni ajratib olish (masalan, "5 ta 101" yoki "101 dan 5 ta")
-        const qtyMatch = line.match(/(\d+)\s*(ta|dona|rulon|metr|quti)/i) || line.match(/^(\d+)/);
-        const quantity = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
-        
-        // Qolgan matnni qidiruv so'zi deb olish
-        const searchStr = line.replace(qtyMatch ? qtyMatch[0] : '', '').trim().replace(/^[^\w\d]+|[^\w\d]+$/g, '');
-        
-        if (searchStr.length < 2) continue;
-
-        // Tizimdan qidirish
-        const res = await axios.get(`/api/products?search=${encodeURIComponent(searchStr)}&limit=1`);
-        
-        if (res.data?.data?.length > 0) {
-          results.push({
-            product: res.data.data[0],
-            requestedQty: quantity,
-            matchedText: line,
-            found: true
-          });
-        } else {
-          results.push({
-            product: null,
-            requestedQty: quantity,
-            matchedText: line,
-            found: false
-          });
-        }
+      if (res.data?.success) {
+        setParsedItems(res.data.data);
+        setStep('results');
+      } else {
+        toast.error("Tahlil qilishda xatolik yuz berdi");
       }
-
-      setParsedItems(results);
-      setStep('results');
     } catch (error) {
       console.error(error);
-      toast.error("Tahlil qilishda xatolik yuz berdi");
+      toast.error("API ga ulanishda xatolik");
     } finally {
       setIsParsing(false);
     }

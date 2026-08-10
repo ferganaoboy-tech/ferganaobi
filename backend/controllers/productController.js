@@ -600,3 +600,96 @@ exports.getReplenishmentRecommendations = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Parse text order using AI
+// @route   POST /api/products/parse-order
+// @access  Public
+exports.parseOrder = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ success: false, message: 'Text is required' });
+
+    let parsedArray = [];
+    if (process.env.GEMINI_API_KEY) {
+      const { GoogleGenAI } = require('@google/genai');
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const prompt = `Siz elektron tijorat uchun AI parsersisiz.
+Quyidagi matndan foydalanuvchi buyurtma qilmoqchi bo'lgan maxsulotlarni va ularning miqdorini ajratib oling.
+Matn: "${text}"
+Faqatgina JSON formatda massiv (array) qaytaring, hech qanday qo'shimcha izohsiz.
+Har bir obyekt quyidagi maydonlarga ega bo'lsin:
+- "matchedText": asl matndagi shu maxsulotga tegishli parcha
+- "searchStr": maxsulotning nomi, artikuli yoki kodi (faqat qidiruv uchun eng muhim so'zlarni qoldiring)
+- "quantity": miqdori (son)
+
+Agar matnda maxsulot topilmasa, bo'sh massiv [] qaytaring.
+Misol:
+Matn: "10 dona 25112 dan va 2 ta oq 101"
+Natija:
+[
+  { "matchedText": "10 dona 25112 dan", "searchStr": "25112", "quantity": 10 },
+  { "matchedText": "2 ta oq 101", "searchStr": "101 oq", "quantity": 2 }
+]`;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      });
+      let responseText = response.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      parsedArray = JSON.parse(responseText);
+    } else {
+      // Fallback simple regex parsing
+      const lines = text.split('\n').filter(l => l.trim().length > 0);
+      parsedArray = lines.map(line => {
+        const qtyMatch = line.match(/(\d+)\s*(ta|dona|rulon|metr|quti|dan)/i) || line.match(/^(\d+)/);
+        const quantity = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
+        const searchStr = line.replace(qtyMatch ? qtyMatch[0] : '', '').replace(/dan/gi, '').trim().replace(/^[^\w\d]+|[^\w\d]+$/g, '');
+        return { matchedText: line, searchStr, quantity };
+      });
+    }
+
+    const results = [];
+    for (const item of parsedArray) {
+      if (!item.searchStr || item.searchStr.length < 2) continue;
+      
+      const searchTerms = item.searchStr.split(' ').map(s => s.trim()).filter(Boolean);
+      const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+      
+      let query = { isActive: true };
+      
+      if (searchTerms.length > 0) {
+        query.$and = searchTerms.map(term => {
+          const regex = new RegExp(escapeRegex(term), 'i');
+          return {
+             $or: [
+                { artikul: regex },
+                { brand: regex },
+                { collection: regex }
+             ]
+          };
+        });
+      }
+
+      const products = await Product.find(query).populate('warehouse', 'name color').limit(1).lean();
+      
+      if (products.length > 0) {
+        results.push({
+          product: products[0],
+          requestedQty: item.quantity,
+          matchedText: item.matchedText,
+          found: true
+        });
+      } else {
+        results.push({
+          product: null,
+          requestedQty: item.quantity,
+          matchedText: item.matchedText,
+          found: false
+        });
+      }
+    }
+
+    res.status(200).json({ success: true, data: results });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

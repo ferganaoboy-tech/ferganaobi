@@ -11,9 +11,11 @@ const {
   getFilters,
   getDashboardStats,
   getCompareProducts,
-  getReplenishmentRecommendations
+  getReplenishmentRecommendations,
+  parseOrder
 } = require('../controllers/productController');
 
+router.post('/parse-order', parseOrder);
 router.get('/stats/dashboard', getDashboardStats);
 router.get('/filters', getFilters);
 router.get('/compare', getCompareProducts);
