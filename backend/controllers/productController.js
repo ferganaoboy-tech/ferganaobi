@@ -47,14 +47,26 @@ exports.getProducts = async (req, res) => {
     }
     
     if (search) {
-      const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const searchRegex = new RegExp(escapeRegex(search), 'i');
-      query.$or = [
-        { artikul: searchRegex },
-        { brand: searchRegex },
-        { collection: searchRegex },
-        { polka: searchRegex }
-      ];
+      const searchTerms = search.split(',').map(s => s.trim()).filter(Boolean);
+      const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+
+      if (searchTerms.length > 1) {
+        const regexes = searchTerms.map(term => new RegExp(escapeRegex(term), 'i'));
+        query.$or = [
+          { artikul: { $in: regexes } },
+          { brand: { $in: regexes } },
+          { collection: { $in: regexes } },
+          { polka: { $in: regexes } }
+        ];
+      } else {
+        const searchRegex = new RegExp(escapeRegex(search), 'i');
+        query.$or = [
+          { artikul: searchRegex },
+          { brand: searchRegex },
+          { collection: searchRegex },
+          { polka: searchRegex }
+        ];
+      }
     }
 
     if (minPrice || maxPrice) {

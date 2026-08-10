@@ -45,11 +45,51 @@ const ProductSearchAndFilters = ({
         />
         {/* Auto-suggest Dropdown */}
         {filters.search && isSearchFocused && (
-          <div className="absolute top-[48px] left-0 w-full bg-overlay border border-subtle shadow-2xl rounded-xl z-50 max-h-[360px] overflow-y-auto animate-fade-in no-scrollbar py-2">
+          <div className="absolute top-[48px] left-0 w-full bg-overlay border border-subtle shadow-2xl rounded-xl z-50 max-h-[360px] overflow-y-auto flex flex-col animate-fade-in no-scrollbar py-2">
+            {products.length > 1 && searchInput.includes(',') && (
+              <div className="px-3 pb-2 mb-2 border-b border-subtle flex justify-between items-center sticky top-0 bg-overlay z-10">
+                <span className="text-13 text-secondary font-medium">{products.length} ta topildi</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    let addedCount = 0;
+                    let hasWarehouseMismatch = false;
+                    products.slice(0, 50).forEach(product => {
+                      const suggestUnit = cartUnits[product._id] || product.unit || 'rulon';
+                      const suggestRemaining = getRemainingStock(product, suggestUnit);
+                      if (suggestRemaining > 0) {
+                        const quantity = Math.min(cartQuantities[product._id] || 1, suggestRemaining);
+                        const prodWarehouseId = product.warehouse?._id || product.warehouse;
+                        if (!cartWarehouse || cartWarehouse === prodWarehouseId) {
+                           addToCart(product, quantity, suggestUnit);
+                           addedCount++;
+                        } else {
+                           hasWarehouseMismatch = true;
+                        }
+                      }
+                    });
+                    if(addedCount > 0) {
+                      toast.success(`${addedCount} ta maxsulot savatga qo'shildi!`);
+                      if(hasWarehouseMismatch) toast.error("Ba'zi maxsulotlar boshqa skladda bo'lgani uchun qo'shilmadi.");
+                      clearSearch();
+                    } else if (hasWarehouseMismatch) {
+                      toast.error("Maxsulotlar boshqa skladda bo'lgani uchun qo'shilmadi.");
+                    } else {
+                      toast.error("Barcha maxsulotlar zaxirasi tugagan.");
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-accent text-inverse rounded-lg text-12 font-semibold active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  Barchasini qo'shish
+                </button>
+              </div>
+            )}
             {products.length === 0 ? (
               <div className="p-4 text-center text-13 text-tertiary">Bunday artikul topilmadi</div>
             ) : (
-              <ul className="flex flex-col">
+              <ul className="flex flex-col relative z-0">
                 {products.slice(0, 10).map(product => (
                   <li 
                     key={`search-${product._id}`} 

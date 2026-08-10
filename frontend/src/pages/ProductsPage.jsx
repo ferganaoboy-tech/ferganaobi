@@ -5,6 +5,7 @@ import { useProductsInfinite, useFilters, useDeleteProduct } from '../hooks/useP
 import { useWarehouses } from '../hooks/useWarehouses';
 import ProductModal from '../components/ProductModal';
 import BarcodeScannerModal from '../components/BarcodeScannerModal';
+import AiOrderParserModal from '../components/AiOrderParserModal';
 import { useCart } from '../contexts/CartContext';
 import { useTransfer } from '../contexts/TransferContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,6 +26,7 @@ const ProductsPage = () => {
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isAiParserOpen, setIsAiParserOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [compareProduct, setCompareProduct] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
@@ -204,6 +206,7 @@ const ProductsPage = () => {
       <ProductHeader 
         totalProductsCount={totalProductsCount} 
         openCreateModal={openCreateModal} 
+        openAiParser={() => setIsAiParserOpen(true)}
       />
 
       <ProductSearchAndFilters
@@ -361,6 +364,7 @@ const ProductsPage = () => {
 
       <ProductModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} product={editingProduct} />
       <BarcodeScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScan={(text) => { setFilters(prev => ({ ...prev, search: text })); setIsScannerOpen(false); toast.success("Skanerlandi: " + text); haptics.light(); }} />
+      <AiOrderParserModal isOpen={isAiParserOpen} onClose={() => setIsAiParserOpen(false)} cartWarehouse={cartWarehouse} />
       <ConfirmModal isOpen={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)} onConfirm={() => { if (confirmDeleteId) { deleteMutation.mutate(confirmDeleteId); toast.success("Mahsulot muvaffaqiyatli o'chirildi"); } }} title="Mahsulotni o'chirish" message="Rostdan o'chirishni istaysizmi?" confirmText="O'chirish" cancelText="Bekor qilish" isDanger={true} />
       <ConfirmModal isOpen={!!confirmWarehouseSwitch} onClose={() => setConfirmWarehouseSwitch(null)} onConfirm={handleConfirmWarehouseSwitch} title="Skladni almashtirish" message="Savatda boshqa skladdan mahsulot bor. Savatni tozalab, yangi skladdan boshlaymizmi?" confirmText="Almashtirish" cancelText="Bekor qilish" isDanger={true} />
       <CompareModal isOpen={!!compareProduct} onClose={() => setCompareProduct(null)} product={compareProduct} />
