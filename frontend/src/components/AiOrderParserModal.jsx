@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Sparkles, Loader2, ShoppingBag, CheckCircle2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCart } from '../contexts/CartContext';
-import axios from 'axios';
+import api from '../api';
 
 const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
   const [text, setText] = useState('');
@@ -22,7 +22,7 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
     setIsParsing(true);
     
     try {
-      const res = await axios.post('/api/products/parse-order', { text });
+      const res = await api.post('/products/parse-order', { text });
       
       if (res.data?.success) {
         setParsedItems(res.data.data);
