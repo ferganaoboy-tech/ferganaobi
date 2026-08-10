@@ -610,10 +610,8 @@ exports.parseOrder = async (req, res) => {
     if (!text) return res.status(400).json({ success: false, message: 'Text is required' });
 
     let parsedArray = [];
-    if (process.env.GEMINI_API_KEY) {
-      const { GoogleGenAI } = require('@google/genai');
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `Siz elektron tijorat uchun AI parsersisiz.
+    let responseText = null;
+    const prompt = `Siz elektron tijorat uchun AI parsersisiz.
 Quyidagi matndan foydalanuvchi buyurtma qilmoqchi bo'lgan maxsulotlarni va ularning miqdorini ajratib oling.
 Matn: "${text}"
 Faqatgina JSON formatda massiv (array) qaytaring, hech qanday qo'shimcha izohsiz.
@@ -630,14 +628,45 @@ Natija:
   { "matchedText": "10 dona 25112 dan", "searchStr": "25112", "quantity": 10 },
   { "matchedText": "2 ta oq 101", "searchStr": "101 oq", "quantity": 2 }
 ]`;
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
-      let responseText = response.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    try {
+      if (process.env.GEMINI_API_KEY) {
+        const { GoogleGenAI } = require('@google/genai');
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+        });
+        responseText = response.text;
+      }
+    } catch (err) {
+      console.error("Gemini API Error:", err.message);
+    }
+
+    if (!responseText && process.env.GROQ_API_KEY) {
+      try {
+        const axios = require('axios');
+        const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1
+        }, {
+          headers: {
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        responseText = res.data.choices[0].message.content;
+      } catch (err) {
+        console.error("Groq API Error:", err.message);
+      }
+    }
+
+    if (responseText) {
+      responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
       parsedArray = JSON.parse(responseText);
     } else {
-      // Fallback simple regex parsing
+      // Fallback simple regex parsing (agar hamma AI ishlamasa)
       const lines = text.split('\n').filter(l => l.trim().length > 0);
       parsedArray = lines.map(line => {
         const qtyMatch = line.match(/(\d+)\s*(ta|dona|rulon|metr|quti|dan)/i) || line.match(/^(\d+)/);
