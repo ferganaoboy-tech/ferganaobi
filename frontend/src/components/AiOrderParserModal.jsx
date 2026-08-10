@@ -71,17 +71,19 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-surface w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-subtle">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-indigo-600" />
+        <div className="flex items-start sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-subtle">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4 pr-2">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-primary leading-tight">AI Buyurtma Yig'uvchi</h2>
-              <p className="text-13 text-tertiary">Mijoz yozgan matnni tashlang, qolganini AI bajaradi</p>
+            <div className="flex flex-col">
+              <h2 className="text-16 sm:text-lg font-bold text-primary leading-tight tracking-tight">AI Buyurtma Yig'uvchi</h2>
+              <p className="text-12 sm:text-13 text-secondary mt-0.5 max-w-[220px] sm:max-w-none leading-snug">
+                Mijoz yozgan matnni tashlang, qolganini AI bajaradi
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-subtle rounded-full transition-colors active:scale-95">
+          <button onClick={onClose} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors active:scale-95 shrink-0 -mt-1 sm:mt-0">
             <X className="w-5 h-5 text-secondary" />
           </button>
         </div>
@@ -109,25 +111,26 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
               <h3 className="text-14 font-semibold text-primary mb-2">Tahlil natijalari:</h3>
               <div className="flex flex-col gap-2">
                 {parsedItems.map((item, idx) => (
-                  <div key={idx} className={`p-3 rounded-xl border flex items-center justify-between ${item.found ? 'bg-emerald-50/30 border-emerald-100' : 'bg-red-50/30 border-red-100'}`}>
-                    <div className="flex flex-col gap-1 min-w-0">
-                      <p className="text-13 font-medium text-secondary truncate">"{item.matchedText}"</p>
+                  <div key={idx} className={`relative p-3.5 sm:p-4 rounded-xl border overflow-hidden flex items-center justify-between transition-all ${item.found ? 'bg-gradient-to-r from-emerald-50/50 to-transparent border-emerald-200/60 shadow-sm' : 'bg-gradient-to-r from-red-50/50 to-transparent border-red-200/60 shadow-sm'}`}>
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${item.found ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                    <div className="flex flex-col gap-1.5 min-w-0 pl-1.5">
+                      <p className="text-13 sm:text-14 font-medium text-secondary truncate">"{item.matchedText}"</p>
                       {item.found ? (
-                        <div className="flex items-center gap-2 text-12 text-emerald-700 font-semibold">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-1.5 text-11 sm:text-12 text-emerald-700 font-bold bg-emerald-100/50 w-fit px-2 py-0.5 rounded-md">
+                          <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
                           Topildi: {item.product.brand || 'Brendsiz'} - {item.product.artikul}
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 text-12 text-red-600 font-medium">
-                          <AlertCircle className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-1.5 text-11 sm:text-12 text-red-600 font-bold bg-red-100/50 w-fit px-2 py-0.5 rounded-md">
+                          <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
                           Bazada bunday maxsulot topilmadi
                         </div>
                       )}
                     </div>
                     {item.found && (
                       <div className="shrink-0 flex flex-col items-end">
-                        <span className="text-11 text-tertiary">Miqdor</span>
-                        <span className="text-14 font-bold text-primary">{item.requestedQty} {item.product.unit || 'dona'}</span>
+                        <span className="text-[10px] sm:text-11 text-tertiary uppercase tracking-wider font-semibold">Miqdor</span>
+                        <span className="text-14 sm:text-15 font-bold text-primary">{item.requestedQty} <span className="text-12 sm:text-13 font-medium text-secondary">{item.product.unit || 'dona'}</span></span>
                       </div>
                     )}
                   </div>
@@ -137,14 +140,14 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
           )}
         </div>
 
-        <div className="p-4 sm:p-6 border-t border-subtle bg-surface flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
+        <div className="p-4 sm:p-5 border-t border-subtle bg-gray-50/50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3">
           {step === 'results' && (
             <button
               onClick={() => {
                 setStep('input');
                 setParsedItems([]);
               }}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-subtle hover:bg-subtle text-secondary font-medium transition-colors active:scale-95 flex items-center justify-center"
+              className="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl border border-black/10 bg-white hover:bg-gray-50 text-secondary font-semibold transition-all active:scale-95 flex items-center justify-center shadow-sm"
             >
               Ortga qaytish
             </button>
@@ -153,18 +156,18 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
           <button
             onClick={step === 'input' ? handleParse : handleAddAll}
             disabled={isParsing || (step === 'input' && !text.trim())}
-            className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-medium transition-all active:scale-95 flex items-center justify-center gap-2 text-white shadow-sm
+            className={`w-full sm:w-auto px-6 py-3 sm:py-2.5 rounded-xl font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-md
               ${isParsing || (step === 'input' && !text.trim()) 
-                ? 'bg-indigo-300 cursor-not-allowed' 
-                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20 hover:shadow-indigo-600/40'
+                ? 'bg-indigo-400/50 text-white/80 cursor-not-allowed shadow-none' 
+                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5'
               }`}
           >
             {isParsing ? (
-              <><Loader2 className="w-4 h-4 animate-spin shrink-0" /> <span className="truncate">Tahlil qilinmoqda...</span></>
+              <><Loader2 className="w-4.5 h-4.5 animate-spin shrink-0" /> <span className="truncate">Tahlil qilinmoqda...</span></>
             ) : step === 'input' ? (
-              <><Sparkles className="w-4 h-4 shrink-0" /> <span className="truncate">Matnni Tahlil Qilish</span></>
+              <><Sparkles className="w-4.5 h-4.5 shrink-0" /> <span className="truncate">Matnni Tahlil Qilish</span></>
             ) : (
-              <><ShoppingBag className="w-4 h-4 shrink-0" /> <span className="truncate">Barchasini Savatga Qo'shish</span></>
+              <><ShoppingBag className="w-4.5 h-4.5 shrink-0" /> <span className="truncate">Barchasini Savatga Qo'shish</span></>
             )}
           </button>
         </div>
