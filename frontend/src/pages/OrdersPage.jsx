@@ -100,18 +100,17 @@ const OrdersPage = () => {
 
         {/* Filter Bar */}
         <div className="flex flex-col gap-4 mt-5">
-          
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 w-full">
-            {/* Status Tabs (Pills) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full xl:w-auto pb-1 xl:pb-0">
+            {/* Status Tabs */}
+            <div className="flex items-center gap-1 p-1 bg-subtle/50 rounded-[14px] overflow-x-auto no-scrollbar w-full xl:w-auto border border-subtle/30">
               {TABS.map(tab => (
                 <button
                   key={tab.value}
                   onClick={() => handleFilterChange({ target: { name: 'status', value: tab.value } })}
-                  className={`shrink-0 h-9 px-4 rounded-xl text-[13px] font-[600] whitespace-nowrap transition-all border ${
+                  className={`shrink-0 h-[34px] px-4 rounded-[10px] text-[13px] font-[600] whitespace-nowrap transition-all ${
                     filters.status === tab.value 
-                    ? 'bg-primary text-inverse border-primary shadow-md' 
-                    : 'bg-surface text-tertiary border-subtle hover:text-secondary hover:bg-subtle'
+                    ? 'bg-surface text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' 
+                    : 'text-secondary hover:text-primary hover:bg-surface/50'
                   }`}
                 >
                   {tab.label}
@@ -119,37 +118,36 @@ const OrdersPage = () => {
               ))}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto shrink-0 pb-1 xl:pb-0">
-              {/* Date Range */}
-              <div className="flex items-center justify-between sm:justify-start gap-2 bg-surface border border-subtle rounded-xl h-[38px] px-3 shadow-sm hover:border-accent/50 transition-colors w-full sm:w-auto shrink-0">
-                <Calendar className="w-4 h-4 text-tertiary shrink-0" />
+            {/* Date Range & Search */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto shrink-0 pb-1 xl:pb-0">
+              <div className="flex items-center bg-surface border border-subtle rounded-[12px] h-[38px] px-3 shadow-sm focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all w-full sm:w-auto overflow-hidden">
+                <Calendar className="w-4 h-4 text-tertiary shrink-0 mr-2" />
                 <input 
                   type="date"
                   name="dateFrom"
                   value={filters.dateFrom || ''}
                   onChange={handleFilterChange}
-                  className="bg-transparent text-[13px] text-primary focus:outline-none w-full sm:w-[110px] cursor-pointer text-center sm:text-left"
+                  className="bg-transparent text-[13px] font-[500] text-primary focus:outline-none w-full sm:w-[110px] cursor-pointer"
                 />
-                <span className="text-tertiary text-[12px] font-medium shrink-0">-</span>
+                <div className="w-[1px] h-4 bg-subtle mx-2 shrink-0" />
                 <input 
                   type="date"
                   name="dateTo"
                   value={filters.dateTo || ''}
                   onChange={handleFilterChange}
-                  className="bg-transparent text-[13px] text-primary focus:outline-none w-full sm:w-[110px] cursor-pointer text-center sm:text-left"
+                  className="bg-transparent text-[13px] font-[500] text-primary focus:outline-none w-full sm:w-[110px] cursor-pointer"
                 />
               </div>
 
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-[250px] shrink-0">
+              <div className="relative w-full sm:w-[240px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary" />
                 <input 
                   type="text" 
                   name="search"
-                  placeholder="Buyurtma raqamini qidiring..." 
+                  placeholder="Buyurtma raqami..." 
                   value={filters.search || ''}
                   onChange={handleFilterChange}
-                  className="w-full h-[38px] pl-9 pr-4 bg-surface border border-subtle rounded-xl text-[13px] text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all shadow-sm placeholder:text-tertiary"
+                  className="w-full h-[38px] pl-9 pr-4 bg-surface border border-subtle rounded-[12px] text-[13px] font-[500] text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all shadow-sm placeholder:text-tertiary"
                 />
               </div>
             </div>
@@ -321,56 +319,62 @@ const OrdersPage = () => {
             {/* Mobile Cards */}
             <div className="lg:hidden flex flex-col gap-3 mt-1">
               {orders.map(order => (
-                <div key={`mobile-${order._id}`} className="bg-surface border border-subtle rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm flex flex-col">
+                <div key={`mobile-${order._id}`} className="bg-surface border border-subtle hover:border-default rounded-[20px] overflow-hidden shadow-sm flex flex-col transition-all">
                   <button
                     onClick={() => toggleExpand(order._id)}
-                    className="w-full text-left p-3.5 sm:p-5 flex flex-col gap-3 sm:gap-4 active:bg-subtle transition-colors"
+                    className="w-full text-left p-4 sm:p-5 flex flex-col gap-4 focus:outline-none active:bg-subtle/50 transition-colors"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex flex-col gap-1.5">
+                    {/* Header: ID, Badge & Date */}
+                    <div className="flex items-start justify-between w-full">
+                      <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-[16px] font-[800] text-primary">{order.orderNumber}</span>
+                          <span className="text-[15px] font-[700] tracking-tight text-primary">{order.orderNumber}</span>
                           {order.notes && order.notes.includes('qaytarildi') && (
                             <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-[800] uppercase tracking-wider">Vozvrat</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 text-[12px] text-tertiary font-[500]">
-                          <Clock className="w-3.5 h-3.5" />
-                          {formatDateTime(order.createdAt)}
-                        </div>
+                        <span className="text-[12px] font-[500] text-tertiary">{formatDateTime(order.createdAt)}</span>
                       </div>
-                      <div className="shrink-0">
-                        {getStatusBadge(order.status)}
+                      <div className="shrink-0">{getStatusBadge(order.status)}</div>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="flex items-center gap-3 w-full overflow-hidden">
+                      <div className="w-10 h-10 rounded-full bg-app border border-subtle flex items-center justify-center shrink-0">
+                        <span className="text-[14px] font-[700] text-secondary uppercase">{order.customer?.name?.charAt(0) || 'M'}</span>
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[14px] font-[600] text-primary truncate">{order.customer?.name || 'Mijoz nomi ko\'rsatilmagan'}</span>
+                        <div className="flex items-center gap-1.5 text-[12px] font-[500] text-tertiary mt-0.5">
+                          <span className="capitalize shrink-0">{order.type === 'wholesale' ? 'Sotuv' : 'Chakana'}</span>
+                          <span className="w-1 h-1 bg-subtle rounded-full shrink-0"></span>
+                          <span className="truncate">{order.warehouse?.name}</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="bg-subtle/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-subtle">
-                      <div className="font-[700] text-[14px] sm:text-[15px] text-primary leading-tight">{order.customer?.name}</div>
-                      <div className="flex items-center gap-2 text-[12px] text-secondary mt-1 font-[500]">
-                        <span className="capitalize">{order.type === 'wholesale' ? 'Sotuv' : 'Chakana'}</span>
-                        <span className="w-1 h-1 bg-subtle rounded-full"></span>
-                        <span>{order.warehouse?.name}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-end justify-between pt-1">
-                      <div>
-                        <div className="text-[11px] text-tertiary font-[600] uppercase tracking-wider mb-1">Jami Summa</div>
-                        <div className="font-[800] font-mono text-[18px] text-primary leading-none tracking-tight">{formatUZS(order.totalAmount)}</div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="px-2 py-0.5 bg-subtle rounded-md text-[11px] font-[600] text-secondary capitalize">{order.paymentType}</span>
-                          {order.debtAmount > 0 && <span className="px-2 py-0.5 text-[11px] font-[700] text-red-500 bg-red-50 rounded-md">Qarz: {formatUZS(order.debtAmount)}</span>}
+                    {/* Footer: Amount & Actions */}
+                    <div className="flex items-end justify-between pt-3 mt-1 border-t border-subtle/50 w-full">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <span className="px-2 py-0.5 bg-app border border-subtle rounded text-[11px] font-[600] text-secondary capitalize">{order.paymentType}</span>
+                          {order.debtAmount > 0 && <span className="px-2 py-0.5 text-[11px] font-[600] text-red-600 bg-red-50 border border-red-100 rounded">Qarz: {formatUZS(order.debtAmount).replace(" so'm", "")}</span>}
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-[18px] font-[800] text-primary tracking-tight leading-none">{formatUZS(order.totalAmount).replace(" so'm", "")}</span>
+                          <span className="text-[12px] font-[600] text-tertiary">UZS</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
                         <button
                           onClick={() => setCheckOrder(order)}
-                          className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center active:scale-95 transition-all shadow-sm"
+                          className="w-9 h-9 rounded-full bg-app border border-subtle text-secondary hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 flex items-center justify-center transition-all shadow-sm active:scale-95"
+                          title="Chek chiqarish"
                         >
-                          <Printer className="w-5 h-5" />
+                          <Printer className="w-4 h-4" />
                         </button>
-                        <div className="w-10 h-10 rounded-xl bg-subtle flex items-center justify-center text-tertiary transition-transform duration-200">
-                          {expandedOrder === order._id ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                        <div className="w-9 h-9 rounded-full bg-app border border-subtle flex items-center justify-center text-tertiary transition-transform duration-200">
+                          {expandedOrder === order._id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                         </div>
                       </div>
                     </div>
