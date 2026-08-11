@@ -715,8 +715,8 @@ Output:`;
         const parsedData = JSON.parse(responseText);
         if (parsedData.status === 'success' && Array.isArray(parsedData.items)) {
           parsedArray = parsedData.items.map(item => ({
-            matchedText: item.sku,
-            searchStr: item.sku,
+            matchedText: String(item.sku),
+            searchStr: String(item.sku),
             quantity: item.quantity || 1
           }));
         }

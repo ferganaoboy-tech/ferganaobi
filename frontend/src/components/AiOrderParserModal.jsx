@@ -38,27 +38,33 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
       toast.success("Gapiravering, eshityapman...");
     };
 
-    let currentTranscript = text ? text + (text.endsWith(' ') ? '' : ' ') : '';
+    let initialText = text ? text + (text.endsWith(' ') ? '' : ' ') : '';
 
     recognition.onresult = (event) => {
+      let finalTranscript = '';
       let interimTranscript = '';
-      let finalChunk = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
+      
+      for (let i = 0; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
-          finalChunk += event.results[i][0].transcript + ' ';
+          finalTranscript += event.results[i][0].transcript + ' ';
         } else {
           interimTranscript += event.results[i][0].transcript;
         }
       }
-      if (finalChunk) {
-        currentTranscript += finalChunk;
-      }
-      setText(currentTranscript + interimTranscript);
+      
+      setText(initialText + finalTranscript + interimTranscript);
     };
 
     recognition.onerror = (event) => {
-      console.error(event.error);
+      console.error("SpeechRecognition error:", event.error);
       setIsRecording(false);
+      if (event.error === 'not-allowed') {
+        toast.error("Mikrofondan foydalanish uchun brauzerdan ruxsat berishingiz kerak!");
+      } else if (event.error === 'network') {
+        toast.error("Ovozli kiritish uchun internet kerak!");
+      } else if (event.error !== 'no-speech') {
+        toast.error("Ovoz yozishda kutilmagan xatolik yuz berdi.");
+      }
     };
 
     recognition.onend = () => {
@@ -75,6 +81,13 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
       toast.error("Matn kiritilmadi!");
       return;
     }
+    
+    // Tahlil boshlanganda mikrofonni avtomatik o'chiramiz
+    if (isRecording && recognitionInstance) {
+      recognitionInstance.stop();
+      setIsRecording(false);
+    }
+
     setIsParsing(true);
     
     try {
