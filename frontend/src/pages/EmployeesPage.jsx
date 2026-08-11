@@ -105,8 +105,8 @@ const UserModal = ({ isOpen, onClose, user, onSubmit, isSubmitting }) => {
         <form id="user-form" onSubmit={handleSubmit} autoComplete="off"
           className="p-5 space-y-4 flex-1 overflow-y-auto no-scrollbar">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="sm:col-span-2">
               <label className={labelClass}>Ism-sharif *</label>
               <input type="text" name="name" required value={formData.name}
                 onChange={handleChange} className={inputClass} placeholder="Alisher Odilov" />
@@ -126,16 +126,17 @@ const UserModal = ({ isOpen, onClose, user, onSubmit, isSubmitting }) => {
             </div>
             <div>
               <label className={labelClass}>Terminal PIN {user ? '(o\'z)' : '*'}</label>
-              <div className="relative">
+              <div className="relative flex items-center">
                 <input type="text" name="pin" required={!user} minLength={4} maxLength={4}
                   value={formData.pin} onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '');
                     setFormData({...formData, pin: val});
                   }}
-                  className={`${inputClass} font-mono tracking-widest text-[16px] pr-20`} placeholder="1234"
+                  className={`${inputClass} font-mono tracking-widest text-[16px] pr-14`} placeholder="1234"
                   autoComplete="off" />
                 <button type="button" onClick={() => setFormData({...formData, pin: Math.floor(1000 + Math.random() * 9000).toString()})}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-subtle hover:bg-default rounded-lg text-[11px] font-[600] text-primary transition-all active:scale-95">
+                  className="absolute right-3 text-[11px] font-bold tracking-wider text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 uppercase transition-colors select-none"
+                  title="Yangi PIN kod yaratish">
                   GEN
                 </button>
               </div>
@@ -153,7 +154,7 @@ const UserModal = ({ isOpen, onClose, user, onSubmit, isSubmitting }) => {
                 ]}
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className={labelClass}>Sklad</label>
               <CustomSelect
                 value={formData.warehouse}
@@ -168,21 +169,30 @@ const UserModal = ({ isOpen, onClose, user, onSubmit, isSubmitting }) => {
           </div>
 
           {/* permissions */}
-          <div>
-            <label className={`${labelClass} flex items-center gap-1.5 mb-3`}>
-              <Shield className="w-3 h-3" /> Qo'shimcha huquqlar
+          <div className="mt-4">
+            <label className={`${labelClass} flex items-center gap-1.5 mb-3 text-indigo-500`}>
+              <Shield className="w-3.5 h-3.5" /> Qo'shimcha huquqlar
             </label>
-            <div className="space-y-2">
-              {ALL_PERMISSIONS.map(perm => (
-                <label key={perm.id}
-                  className="flex items-center gap-3 px-4 py-3 rounded-[12px] border border-subtle bg-surface hover:bg-raised cursor-pointer transition-all duration-200">
-                  <input type="checkbox"
-                    checked={formData.permissions.includes(perm.id)}
-                    onChange={() => handlePermissionToggle(perm.id)}
-                    className="w-[18px] h-[18px] rounded-md border-default bg-surface cursor-pointer accent-accent" />
-                  <span className="text-[13.5px] font-[500] text-primary">{perm.label}</span>
-                </label>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {ALL_PERMISSIONS.map(perm => {
+                const isChecked = formData.permissions.includes(perm.id);
+                return (
+                  <label key={perm.id}
+                    className={`flex items-center gap-3 px-4 py-3.5 rounded-[12px] border transition-all duration-200 cursor-pointer select-none ${
+                      isChecked 
+                        ? 'bg-indigo-50/50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 shadow-sm' 
+                        : 'bg-surface border-subtle hover:border-default hover:bg-raised'
+                    }`}>
+                    <input type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handlePermissionToggle(perm.id)}
+                      className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 transition-colors cursor-pointer accent-indigo-600" />
+                    <span className={`text-[13px] font-medium transition-colors ${
+                      isChecked ? 'text-indigo-900 dark:text-indigo-300' : 'text-primary'
+                    }`}>{perm.label}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
         </form>

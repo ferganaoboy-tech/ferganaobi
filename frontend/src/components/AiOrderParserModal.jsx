@@ -139,15 +139,15 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-md p-4 animate-fade-in">
-      <div className="bg-white dark:bg-[#0A0A0A] border border-black/5 dark:border-white/5 w-full max-w-2xl rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+      <div className="bg-surface border border-subtle w-full max-w-2xl rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-accent" />
             </div>
-            <h2 className="text-[17px] font-semibold text-gray-900 dark:text-white tracking-tight">AI Buyurtma Yig'uvchi</h2>
+            <h2 className="text-[17px] font-semibold text-primary tracking-tight">AI Buyurtma Yig'uvchi</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors active:scale-95 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/10">
+          <button onClick={onClose} className="text-tertiary hover:text-primary transition-colors active:scale-95 p-1 rounded-full hover:bg-raised">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -155,12 +155,12 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
         <div className="px-6 pb-6 flex-1 overflow-y-auto max-h-[70vh]">
           {step === 'input' ? (
             <div className="flex flex-col h-full">
-              <div className="relative group rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] focus-within:border-indigo-500/50 focus-within:bg-white dark:focus-within:bg-[#0A0A0A] transition-all overflow-hidden shadow-inner dark:shadow-none">
+              <div className="relative group rounded-2xl border border-subtle bg-app focus-within:border-focus focus-within:bg-surface transition-all overflow-hidden shadow-inner dark:shadow-none">
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Buyurtmani yozing yoki mikrofonga gapiring...&#10;Masalan: 102 artikuldan 5 ta"
-                  className="w-full h-56 p-5 pb-16 bg-transparent outline-none resize-none text-[15px] leading-relaxed text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                  className="w-full h-56 p-5 pb-16 bg-transparent outline-none resize-none text-[15px] leading-relaxed text-primary placeholder:text-disabled"
                 />
                 <div className="absolute bottom-3 right-3 flex items-center gap-3">
                   {isRecording && <span className="text-xs font-medium text-red-500 animate-pulse tracking-wide uppercase">Tinglanmoqda...</span>}
@@ -169,7 +169,7 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
                     className={`p-3 rounded-full transition-all flex items-center justify-center ${
                       isRecording 
                         ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' 
-                        : 'bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-500/30'
+                        : 'bg-surface border border-subtle text-secondary hover:text-accent hover:border-accent/30'
                     }`}
                     title={isRecording ? "Yozishni to'xtatish" : "Ovozli kiritish"}
                   >
@@ -219,7 +219,7 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
                 setStep('input');
                 setParsedItems([]);
               }}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-full border border-black/10 dark:border-white/10 bg-transparent hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 text-[14px] font-medium transition-all active:scale-95 flex items-center justify-center"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-full border border-default bg-transparent hover:bg-raised text-secondary text-[14px] font-medium transition-all active:scale-95 flex items-center justify-center"
             >
               Ortga qaytish
             </button>
@@ -230,8 +230,8 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
             disabled={isParsing || (step === 'input' && !text.trim())}
             className={`w-full sm:w-auto px-6 py-2.5 rounded-full text-[14px] font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2
               ${isParsing || (step === 'input' && !text.trim()) 
-                ? 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed' 
-                : 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 shadow-lg shadow-black/10 dark:shadow-white/10 hover:-translate-y-0.5'
+                ? 'bg-raised text-disabled cursor-not-allowed' 
+                : 'bg-accent text-inverse hover:bg-accent-hover shadow-lg hover:-translate-y-0.5'
               }`}
           >
             {isParsing ? (
