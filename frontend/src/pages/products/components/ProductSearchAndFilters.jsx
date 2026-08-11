@@ -146,32 +146,58 @@ const ProductSearchAndFilters = ({
                       const suggestOutOfStock = (product.quantity || 0) <= 0;
                       const suggestCartMax = !suggestOutOfStock && suggestRemaining <= 0;
                       return (
-                        <button 
-                          disabled={suggestRemaining <= 0}
-                          onClick={(e) => { 
-                            e.stopPropagation();
-                            const quantity = Math.min(cartQuantities[product._id] || 1, suggestRemaining);
-                            const unit = suggestUnit;
-                            const prodWarehouseId = product.warehouse?._id || product.warehouse;
-                            if (cartWarehouse && cartWarehouse !== prodWarehouseId) {
-                              setConfirmWarehouseSwitch({ product, quantity, unit });
-                            } else {
-                              const added = addToCart(product, quantity, unit);
-                              if (added === true) {
-                                toast.success(`${product.brand || product.artikul} (${quantity} ${unit}) savatga qo'shildi!`);
-                                clearSearch();
-                              }
-                            }
-                          }}
-                          className={`w-9 h-9 rounded-lg flex items-center justify-center active:scale-95 transition-all shrink-0 ml-3 shadow-sm ${
-                            suggestRemaining <= 0 
-                              ? 'bg-subtle text-disabled cursor-not-allowed border border-subtle' 
-                              : 'bg-surface text-secondary hover:text-primary hover:bg-subtle border border-subtle'
+                      return (
+                        <div 
+                          className={`flex items-center bg-surface border rounded-lg overflow-hidden shrink-0 ml-3 transition-all ${
+                            suggestRemaining <= 0 ? 'border-subtle opacity-70' : 'border-subtle hover:border-default focus-within:border-focus focus-within:ring-2 focus-within:ring-accent/10 shadow-sm'
                           }`}
-                          title={suggestOutOfStock ? "Skladda yo'q" : suggestCartMax ? "Savatda (Maks)" : "Savatga qo'shish"}
+                          onClick={e => e.stopPropagation()}
                         >
-                          <ShoppingBag className="w-4 h-4" />
-                        </button>
+                          <input
+                            type="number"
+                            min="1"
+                            max={suggestRemaining}
+                            defaultValue="1"
+                            id={`suggest-qty-${product._id}`}
+                            className="w-11 sm:w-12 h-9 bg-transparent text-center text-[13px] font-[600] text-primary outline-none focus:bg-app placeholder:text-disabled transition-colors"
+                            disabled={suggestRemaining <= 0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                document.getElementById(`suggest-btn-${product._id}`)?.click();
+                              }
+                            }}
+                          />
+                          <div className="w-[1px] h-5 bg-subtle" />
+                          <button 
+                            id={`suggest-btn-${product._id}`}
+                            disabled={suggestRemaining <= 0}
+                            onClick={(e) => { 
+                              e.stopPropagation();
+                              const input = document.getElementById(`suggest-qty-${product._id}`);
+                              const inputQty = parseInt(input?.value || "1", 10);
+                              const quantity = Math.min(Math.max(1, inputQty), suggestRemaining);
+                              const unit = suggestUnit;
+                              const prodWarehouseId = product.warehouse?._id || product.warehouse;
+                              if (cartWarehouse && cartWarehouse !== prodWarehouseId) {
+                                setConfirmWarehouseSwitch({ product, quantity, unit });
+                              } else {
+                                const added = addToCart(product, quantity, unit);
+                                if (added === true) {
+                                  toast.success(`${product.brand || product.artikul} (${quantity} ${unit}) savatga qo'shildi!`);
+                                  clearSearch();
+                                }
+                              }
+                            }}
+                            className={`w-10 h-9 flex items-center justify-center transition-colors ${
+                              suggestRemaining <= 0 
+                                ? 'text-disabled cursor-not-allowed bg-subtle' 
+                                : 'text-inverse bg-accent hover:bg-accent-hover'
+                            }`}
+                            title={suggestOutOfStock ? "Skladda yo'q" : suggestCartMax ? "Savatda (Maks)" : "Savatga qo'shish"}
+                          >
+                            <ShoppingBag className="w-4 h-4" />
+                          </button>
+                        </div>
                       );
                     })()}
                   </li>
