@@ -146,7 +146,6 @@ const ProductSearchAndFilters = ({
                       const suggestOutOfStock = (product.quantity || 0) <= 0;
                       const suggestCartMax = !suggestOutOfStock && suggestRemaining <= 0;
                       return (
-                      return (
                         <div 
                           className={`flex items-center bg-surface border rounded-lg overflow-hidden shrink-0 ml-3 transition-all ${
                             suggestRemaining <= 0 ? 'border-subtle opacity-70' : 'border-subtle hover:border-default focus-within:border-focus focus-within:ring-2 focus-within:ring-accent/10 shadow-sm'
