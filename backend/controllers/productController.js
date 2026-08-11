@@ -610,24 +610,71 @@ exports.parseOrder = async (req, res) => {
     if (!text) return res.status(400).json({ success: false, message: 'Text is required' });
 
     let parsedArray = [];
+    let parsedArray = [];
     let responseText = null;
-    const prompt = `Siz elektron tijorat uchun AI parsersisiz.
-Quyidagi matndan foydalanuvchi buyurtma qilmoqchi bo'lgan maxsulotlarni va ularning miqdorini ajratib oling.
-Matn: "${text}"
-Faqatgina JSON formatda massiv (array) qaytaring, hech qanday qo'shimcha izohsiz.
-Har bir obyekt quyidagi maydonlarga ega bo'lsin:
-- "matchedText": asl matndagi shu maxsulotga tegishli parcha
-- "searchStr": maxsulotning nomi, artikuli yoki kodi (faqat qidiruv uchun eng muhim so'zlarni qoldiring)
-- "quantity": miqdori (son)
+    const prompt = `You are an ultra-precise, Senior-Level E-Commerce Voice-to-JSON Parser API engine. Your sole objective is to parse raw, voice-transcribed Uzbek text (Speech-to-Text output) containing bulk order items and transform it into a deterministic, normalized JSON payload representing SKUs (articuls) and their specified quantities.
 
-Agar matnda maxsulot topilmasa, bo'sh massiv [] qaytaring.
-Misol:
-Matn: "10 dona 25112 dan va 2 ta oq 101"
-Natija:
-[
-  { "matchedText": "10 dona 25112 dan", "searchStr": "25112", "quantity": 10 },
-  { "matchedText": "2 ta oq 101", "searchStr": "101 oq", "quantity": 2 }
-]`;
+### SYSTEM BOUNDARIES & OPERATING PRINCIPLES:
+1. DETERMINISTIC OUTPUT: Output ONLY raw JSON matching the required schema. Absolutely NO markdown block formatting (e.g., NO \`json), NO preamble, NO conversational responses, and NO postscripts.
+2. ZERO ASSUMPTION: Do NOT invent or hallucinate SKUs or quantities that were not stated or heavily implied by the user context.
+
+### INPUT HANDLING RULES (UZBEK PHONETICS & CONTEXT):
+
+1. SKU & QUANTITY EXTRACTION LOGIC:
+   - Parse all verbal numbers into standard numeric strings for \`sku\` and integer values for \`quantity\`.
+   - Examples: "ikki ming besh" -> sku: "2005", "o'n uch" -> 13.
+   - Recognize common Uzbek phrasing patterns:
+     * "[SKU] [Quantity] ta" -> e.g., "1024 dan 5 ta" -> sku: "1024", quantity: 5
+     * "[Quantity] ta [SKU]" -> e.g., "5 ta 1024" -> sku: "1024", quantity: 5
+     * "Artikul [SKU] soni [Quantity]" -> e.g., "artikul 505 soni 12" -> sku: "505", quantity: 12
+     * Short speech: "102 x 3" or "102 dan 3" -> sku: "102", quantity: 3
+
+2. DEFAULTS & CORRECTIONS:
+   - Implicit Quantity: If a SKU is explicitly mentioned without a quantity (e.g., "4002 artikul, keyin 5001 dan 2 ta"), default \`quantity\` MUST be \`1\` for the first item.
+   - Self-Correction Override: If the speaker corrects a quantity or SKU mid-sentence, extract ONLY the final intended value.
+     * Example: "201 artikuldan 5 ta... yo'q, 8 ta yozing" -> sku: "201", quantity: 8.
+     * Example: "105-artikul... kechirasiz 106-artikuldan 3 ta" -> sku: "106", quantity: 3.
+
+3. NOISE & FILLER FILTERING:
+   - Ignore all conversational filler words, greetings, politeness markers, or ambient speech.
+   - Terms to ignore: "aka", "uka", "opa", "iltimos", "savatga tashlang", "qo'shib qo'ying", "yo'q", "bo'ldi", "rahmat", "keyingisi", "ha barakalla".
+
+4. ALPHANUMERIC SKUs & HYPHENS:
+   - If SKUs contain letters (e.g., "A102", "B-50"), retain standard uppercase alphanumeric formatting. Remove trailing dashes or punctuation.
+
+---
+
+### JSON SCHEMA REQUIREMENT:
+
+{
+  "status": "success" | "empty_input",
+  "items": [
+    {
+      "sku": "string (digits or alphanumeric string, no spaces)",
+      "quantity": number (integer >= 1)
+    }
+  ],
+  "unparsed_segments": ["string"]
+}
+
+---
+
+### FEW-SHOT EXAMPLES:
+
+User Input: "Aka assalomu alaykum, 4005 artikuldan 10 ta, 301-dan 2 ta, keyin 8801 ni o'zini ham tashlab qo'ying."
+Output:
+{"status":"success","items":[{"sku":"4005","quantity":10},{"sku":"301","quantity":2},{"sku":"8801","quantity":1}],"unparsed_segments":[]}
+
+User Input: "Bir yuz ikkinchi artikuldan beshta... yo'q oltita yozing. Keyin A45 dan o'nta."
+Output:
+{"status":"success","items":[{"sku":"102","quantity":6},{"sku":"A45","quantity":10}],"unparsed_segments":[]}
+
+User Input: "Eee raxmat aka bo'ldi shu."
+Output:
+{"status":"empty_input","items":[],"unparsed_segments":[]}
+
+User Input: "${text}"
+Output:`;
 
     try {
       if (process.env.GEMINI_API_KEY) {
@@ -664,8 +711,21 @@ Natija:
 
     if (responseText) {
       responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      parsedArray = JSON.parse(responseText);
-    } else {
+      try {
+        const parsedData = JSON.parse(responseText);
+        if (parsedData.status === 'success' && Array.isArray(parsedData.items)) {
+          parsedArray = parsedData.items.map(item => ({
+            matchedText: item.sku,
+            searchStr: item.sku,
+            quantity: item.quantity || 1
+          }));
+        }
+      } catch (e) {
+        console.error("JSON parse error:", e);
+      }
+    } 
+    
+    if (parsedArray.length === 0 && (!responseText || responseText.length === 0)) {
       // Fallback simple regex parsing (agar hamma AI ishlamasa)
       const lines = text.split('\n').filter(l => l.trim().length > 0);
       parsedArray = lines.map(line => {
