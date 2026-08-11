@@ -138,54 +138,44 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-surface w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
-        <div className="flex items-start sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-subtle">
-          <div className="flex items-start sm:items-center gap-3 sm:gap-4 pr-2">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Sparkles className="w-5 h-5 text-white" />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-md p-4 animate-fade-in">
+      <div className="bg-white dark:bg-[#0A0A0A] border border-black/5 dark:border-white/5 w-full max-w-2xl rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             </div>
-            <div className="flex flex-col">
-              <h2 className="text-16 sm:text-lg font-bold text-primary leading-tight tracking-tight">AI Buyurtma Yig'uvchi</h2>
-              <p className="text-12 sm:text-13 text-secondary mt-0.5 max-w-[220px] sm:max-w-none leading-snug">
-                Mijoz yozgan matnni tashlang, qolganini AI bajaradi
-              </p>
-            </div>
+            <h2 className="text-[17px] font-semibold text-gray-900 dark:text-white tracking-tight">AI Buyurtma Yig'uvchi</h2>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors active:scale-95 shrink-0 -mt-1 sm:mt-0">
-            <X className="w-5 h-5 text-secondary" />
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors active:scale-95 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/10">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 flex-1 overflow-y-auto max-h-[70vh]">
+        <div className="px-6 pb-6 flex-1 overflow-y-auto max-h-[70vh]">
           {step === 'input' ? (
-            <div className="flex flex-col gap-4">
-              <div className="bg-indigo-50/50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl p-4">
-                <p className="text-13 text-indigo-800 dark:text-indigo-300 font-medium mb-2">Qanday ishlaydi?</p>
-                <p className="text-12 text-indigo-600 dark:text-indigo-400/90 leading-relaxed">
-                  Telegram yoki WhatsApp'dan mijoz yozgan ro'yxatni nusxalab, pastdagi maydonga joylang.
-                  Masalan:<br/>
-                  <i className="opacity-90">"5 ta 101 oboy, 2 rulon 205 oq, 10 quti kley"</i>
-                </p>
-              </div>
-              <div className="relative">
+            <div className="flex flex-col h-full">
+              <div className="relative group rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] focus-within:border-indigo-500/50 focus-within:bg-white dark:focus-within:bg-[#0A0A0A] transition-all overflow-hidden shadow-inner dark:shadow-none">
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Mijoz xabarini bu yerga joylang yoki mikrofonga gapiring..."
-                  className="w-full h-48 p-4 pb-16 bg-app border border-subtle rounded-xl text-14 text-primary focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/20 outline-none resize-none transition-all shadow-inner"
+                  placeholder="Buyurtmani yozing yoki mikrofonga gapiring...&#10;Masalan: 102 artikuldan 5 ta"
+                  className="w-full h-56 p-5 pb-16 bg-transparent outline-none resize-none text-[15px] leading-relaxed text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                 />
-                <button
-                  onClick={toggleRecording}
-                  className={`absolute bottom-4 right-4 p-3 rounded-full transition-all shadow-lg flex items-center justify-center ${
-                    isRecording 
-                      ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/30' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30'
-                  }`}
-                  title={isRecording ? "Yozishni to'xtatish" : "Ovozli kiritish"}
-                >
-                  <Mic className={`w-5 h-5 ${isRecording ? 'animate-pulse' : ''}`} />
-                </button>
+                <div className="absolute bottom-3 right-3 flex items-center gap-3">
+                  {isRecording && <span className="text-xs font-medium text-red-500 animate-pulse tracking-wide uppercase">Tinglanmoqda...</span>}
+                  <button
+                    onClick={toggleRecording}
+                    className={`p-3 rounded-full transition-all flex items-center justify-center ${
+                      isRecording 
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' 
+                        : 'bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-500/30'
+                    }`}
+                    title={isRecording ? "Yozishni to'xtatish" : "Ovozli kiritish"}
+                  >
+                    <Mic className={`w-4 h-4 ${isRecording ? 'animate-pulse' : ''}`} />
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -222,14 +212,14 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
           )}
         </div>
 
-        <div className="p-4 sm:p-5 border-t border-subtle bg-gray-50/50 dark:bg-black/20 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3">
+        <div className="px-6 pb-6 pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
           {step === 'results' && (
             <button
               onClick={() => {
                 setStep('input');
                 setParsedItems([]);
               }}
-              className="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-surface hover:bg-gray-50 dark:hover:bg-white/5 text-secondary font-semibold transition-all active:scale-95 flex items-center justify-center shadow-sm"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-full border border-black/10 dark:border-white/10 bg-transparent hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 text-[14px] font-medium transition-all active:scale-95 flex items-center justify-center"
             >
               Ortga qaytish
             </button>
@@ -238,18 +228,18 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
           <button
             onClick={step === 'input' ? handleParse : handleAddAll}
             disabled={isParsing || (step === 'input' && !text.trim())}
-            className={`w-full sm:w-auto px-6 py-3 sm:py-2.5 rounded-xl font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-md
+            className={`w-full sm:w-auto px-6 py-2.5 rounded-full text-[14px] font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2
               ${isParsing || (step === 'input' && !text.trim()) 
-                ? 'bg-indigo-400/50 dark:bg-indigo-500/30 text-white/80 dark:text-white/50 cursor-not-allowed shadow-none' 
-                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5'
+                ? 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                : 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 shadow-lg shadow-black/10 dark:shadow-white/10 hover:-translate-y-0.5'
               }`}
           >
             {isParsing ? (
-              <><Loader2 className="w-4.5 h-4.5 animate-spin shrink-0" /> <span className="truncate">Tahlil qilinmoqda...</span></>
+              <><Loader2 className="w-4 h-4 animate-spin shrink-0" /> <span className="truncate">Tahlil qilinmoqda...</span></>
             ) : step === 'input' ? (
-              <><Sparkles className="w-4.5 h-4.5 shrink-0" /> <span className="truncate">Matnni Tahlil Qilish</span></>
+              <><Sparkles className="w-4 h-4 shrink-0" /> <span className="truncate">Tahlil qilish</span></>
             ) : (
-              <><ShoppingBag className="w-4.5 h-4.5 shrink-0" /> <span className="truncate">Barchasini Savatga Qo'shish</span></>
+              <><ShoppingBag className="w-4 h-4 shrink-0" /> <span className="truncate">Savatga qo'shish</span></>
             )}
           </button>
         </div>
