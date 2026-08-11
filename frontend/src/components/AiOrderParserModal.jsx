@@ -179,30 +179,47 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              <h3 className="text-14 font-semibold text-primary mb-2">Tahlil natijalari:</h3>
-              <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-4">
+              <h3 className="text-[15px] font-semibold text-primary">Tahlil natijalari</h3>
+              <div className="flex flex-col gap-3">
                 {parsedItems.map((item, idx) => (
-                  <div key={idx} className={`relative p-3.5 sm:p-4 rounded-xl border overflow-hidden flex items-center justify-between transition-all ${item.found ? 'bg-gradient-to-r from-emerald-50/50 dark:from-emerald-900/20 to-transparent border-emerald-200/60 dark:border-emerald-800/30 shadow-sm' : 'bg-gradient-to-r from-red-50/50 dark:from-red-900/20 to-transparent border-red-200/60 dark:border-red-800/30 shadow-sm'}`}>
-                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${item.found ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                    <div className="flex flex-col gap-1.5 min-w-0 pl-1.5">
-                      <p className="text-13 sm:text-14 font-medium text-secondary truncate">"{item.matchedText}"</p>
-                      {item.found ? (
-                        <div className="flex items-center gap-1.5 text-11 sm:text-12 text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-100/50 dark:bg-emerald-500/20 w-fit px-2 py-0.5 rounded-md">
-                          <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
-                          Topildi: {item.product.brand || 'Brendsiz'} - {item.product.artikul}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-11 sm:text-12 text-red-600 dark:text-red-400 font-bold bg-red-100/50 dark:bg-red-500/20 w-fit px-2 py-0.5 rounded-md">
-                          <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2.5} />
-                          Bazada bunday maxsulot topilmadi
-                        </div>
-                      )}
+                  <div key={idx} className={`p-4 rounded-[16px] border flex items-center justify-between transition-all bg-surface ${item.found ? 'border-subtle hover:border-default' : 'border-red-200/60 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10'}`}>
+                    
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      {/* Icon Container */}
+                      <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${item.found ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'}`}>
+                        {item.found ? <CheckCircle2 className="w-5 h-5" strokeWidth={2.5} /> : <AlertCircle className="w-5 h-5" strokeWidth={2.5} />}
+                      </div>
+                      
+                      {/* Text Data */}
+                      <div className="flex flex-col min-w-0">
+                        {item.found ? (
+                          <>
+                            <p className="text-[15px] font-[600] text-primary truncate leading-tight mb-0.5">
+                              {item.product.brand || 'Brendsiz'} <span className="opacity-50 mx-0.5">•</span> {item.product.artikul}
+                            </p>
+                            <p className="text-[12.5px] text-tertiary truncate font-medium">
+                              "{item.matchedText}"
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-[14px] font-[600] text-red-600 dark:text-red-400 truncate leading-tight mb-0.5">
+                              Bazada topilmadi
+                            </p>
+                            <p className="text-[12.5px] text-tertiary truncate font-medium">
+                              "{item.matchedText}"
+                            </p>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Quantity */}
                     {item.found && (
-                      <div className="shrink-0 flex flex-col items-end">
-                        <span className="text-[10px] sm:text-11 text-tertiary uppercase tracking-wider font-semibold">Miqdor</span>
-                        <span className="text-14 sm:text-15 font-bold text-primary">{item.requestedQty} <span className="text-12 sm:text-13 font-medium text-secondary">{item.product.unit || 'dona'}</span></span>
+                      <div className="shrink-0 flex items-baseline gap-1.5 ml-4 pl-4 border-l border-subtle">
+                        <span className="text-[18px] font-[700] text-primary leading-none tracking-tight">{item.requestedQty}</span>
+                        <span className="text-[13px] font-[500] text-tertiary">{item.product.unit || 'dona'}</span>
                       </div>
                     )}
                   </div>
