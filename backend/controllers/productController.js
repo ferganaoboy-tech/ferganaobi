@@ -608,8 +608,6 @@ exports.parseOrder = async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) return res.status(400).json({ success: false, message: 'Text is required' });
-
-    let parsedArray = [];
     let parsedArray = [];
     let responseText = null;
     const prompt = `You are an ultra-precise, Senior-Level E-Commerce Voice-to-JSON Parser API engine. Your sole objective is to parse raw, voice-transcribed Uzbek text (Speech-to-Text output) containing bulk order items and transform it into a deterministic, normalized JSON payload representing SKUs (articuls) and their specified quantities.
