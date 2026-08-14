@@ -150,12 +150,19 @@ const ProductModal = ({ isOpen, onClose, product = null }) => {
   const renderPriceField = (label, usdName, uzsName, currency, setCurrency, required = false) => {
     const isUsd = currency === 'USD';
     const activeName = isUsd ? usdName : uzsName;
-    const inactiveValue = isUsd ? formData[uzsName] : formData[usdName];
-    const formattedInactive = inactiveValue
-      ? (isUsd
-          ? `≈ ${Math.round(Number(inactiveValue)).toLocaleString()} so'm`
-          : `≈ ${Number(inactiveValue).toFixed(2)} USD`)
-      : '';
+    
+    // Dynamic on-the-fly conversion based on active input
+    const rawVal = formData[activeName];
+    let convertedText = '';
+    if (rawVal && !isNaN(Number(rawVal))) {
+      if (isUsd) {
+        const asUzs = Math.round(Number(rawVal) * usdRate);
+        convertedText = `≈ ${asUzs.toLocaleString('ru-RU')} so'm`;
+      } else {
+        const asUsd = (Number(rawVal) / usdRate).toFixed(2);
+        convertedText = `≈ ${asUsd} USD`;
+      }
+    }
 
     // Determine sublabel based on the db field name to clarify the backwards terminology
     let subLabel = '';
@@ -203,11 +210,12 @@ const ProductModal = ({ isOpen, onClose, product = null }) => {
             </button>
           </div>
         </div>
-        <div className="h-5 mt-1">
-          {formattedInactive && (
-            <span className="text-[12px] text-tertiary font-mono font-medium">
-              {formattedInactive}
-            </span>
+        <div className="h-6 mt-1.5 flex items-center">
+          {convertedText && (
+            <div className="text-[12px] font-[700] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md flex items-center gap-1.5 shadow-sm border border-emerald-100 dark:border-emerald-800/50">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+              {convertedText}
+            </div>
           )}
         </div>
       </div>
