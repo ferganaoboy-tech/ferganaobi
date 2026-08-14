@@ -117,12 +117,18 @@ const ProductsPage = () => {
   });
 
   const [searchInput, setSearchInput] = useState(location.state?.search || '');
+  const [keyboardMode, setKeyboardMode] = useState('none');
 
   const clearSearch = React.useCallback(() => {
     setSearchInput('');
     setFilters(prev => ({ ...prev, search: '' }));
     setIsSearchFocused(false);
-    setTimeout(() => inputRef.current?.focus(), 50);
+    setKeyboardMode('none');
+    setTimeout(() => {
+      // Blur and refocus to guarantee virtual keyboard hides on mobile
+      inputRef.current?.blur();
+      setTimeout(() => inputRef.current?.focus(), 10);
+    }, 50);
   }, []);
 
   React.useEffect(() => {
@@ -212,6 +218,8 @@ const ProductsPage = () => {
       <ProductSearchAndFilters
         searchRef={searchRef}
         inputRef={inputRef}
+        keyboardMode={keyboardMode}
+        setKeyboardMode={setKeyboardMode}
         searchInput={searchInput}
         setSearchInput={setSearchInput}
         handleFilterChange={handleFilterChange}

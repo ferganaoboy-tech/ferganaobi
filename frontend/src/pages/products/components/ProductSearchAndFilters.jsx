@@ -12,6 +12,8 @@ const ProductSearchAndFilters = ({
   handleFilterChange,
   isSearchFocused,
   setIsSearchFocused,
+  keyboardMode,
+  setKeyboardMode,
   filters,
   setFilters,
   products,
@@ -36,9 +38,25 @@ const ProductSearchAndFilters = ({
         <input 
           ref={inputRef}
           name="search"
+          inputMode={keyboardMode || 'none'}
           value={searchInput}
           onChange={handleFilterChange}
           onFocus={() => setIsSearchFocused(true)}
+          onClick={(e) => {
+            if (keyboardMode === 'none') {
+              setKeyboardMode('search');
+              // Blur and refocus to force virtual keyboard to appear on mobile
+              if (document.activeElement === inputRef.current) {
+                inputRef.current.blur();
+                setTimeout(() => inputRef.current.focus(), 10);
+              }
+            }
+          }}
+          onTouchStart={() => {
+            if (keyboardMode === 'none') {
+              setKeyboardMode('search');
+            }
+          }}
           placeholder="Artikul yoki nom bo'yicha qidirish..."
           autoComplete="off"
           className="w-full h-[42px] bg-surface hover:bg-raised border border-subtle hover:border-default rounded-xl pl-10 pr-4 text-[14px] text-primary focus:border-focus focus:bg-app focus:shadow-[0_0_0_4px_var(--bg-subtle)] placeholder:text-tertiary transition-all duration-200 shadow-sm outline-none"

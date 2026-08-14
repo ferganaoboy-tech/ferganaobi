@@ -28,7 +28,10 @@ const saveCartToStorage = (items) => {
   const minimal = items.map(({ product, productName, artikul, unit, quantity, unitPrice, discount, isCustomPrice, warehouse, wholesalePrice, pricePerRoll, rollsPerBox, rollLength }) => ({
     product, productName, artikul, unit, quantity, unitPrice, discount: discount || 0, isCustomPrice: isCustomPrice || false,
     warehouse: warehouse ? String(warehouse) : null,
-    wholesalePrice, pricePerRoll, rollsPerBox, rollLength
+    wholesalePrice: wholesalePrice ?? null, 
+    pricePerRoll: pricePerRoll ?? null, 
+    rollsPerBox: rollsPerBox ?? null, 
+    rollLength: rollLength ?? null
   }));
   localStorage.setItem(CART_KEY, JSON.stringify(minimal));
 };
@@ -120,10 +123,10 @@ export const CartProvider = ({ children }) => {
               unitPrice,
               productName: updatedProduct.brand || updatedProduct.artikul,
               artikul: updatedProduct.artikul,
-              wholesalePrice: updatedProduct.wholesalePrice,
-              pricePerRoll: updatedProduct.pricePerRoll,
-              rollsPerBox: updatedProduct.rollsPerBox,
-              rollLength: updatedProduct.rollLength
+              wholesalePrice: updatedProduct.wholesalePrice ?? null,
+              pricePerRoll: updatedProduct.pricePerRoll ?? null,
+              rollsPerBox: updatedProduct.rollsPerBox ?? null,
+              rollLength: updatedProduct.rollLength ?? null
             };
           }
           return item;
@@ -188,10 +191,10 @@ export const CartProvider = ({ children }) => {
           discount: 0,
           isCustomPrice: false,
           warehouse: String(productWarehouseId),
-          wholesalePrice: product.wholesalePrice,
-          pricePerRoll: product.pricePerRoll,
-          rollsPerBox: product.rollsPerBox,
-          rollLength: product.rollLength
+          wholesalePrice: product.wholesalePrice ?? null,
+          pricePerRoll: product.pricePerRoll ?? null,
+          rollsPerBox: product.rollsPerBox ?? null,
+          rollLength: product.rollLength ?? null
         };
         setProductDetails(prev => ({ ...prev, [product._id]: product }));
         setCartItems([newItem]);
@@ -246,10 +249,10 @@ export const CartProvider = ({ children }) => {
             discount: 0,
             isCustomPrice: false,
             warehouse: String(productWarehouseId),
-            wholesalePrice: product.wholesalePrice,
-            pricePerRoll: product.pricePerRoll,
-            rollsPerBox: product.rollsPerBox,
-            rollLength: product.rollLength
+            wholesalePrice: product.wholesalePrice ?? null,
+            pricePerRoll: product.pricePerRoll ?? null,
+            rollsPerBox: product.rollsPerBox ?? null,
+            rollLength: product.rollLength ?? null
           }
         ];
       }

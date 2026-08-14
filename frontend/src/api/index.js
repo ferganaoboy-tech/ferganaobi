@@ -25,6 +25,7 @@ api.interceptors.request.use(
 
 let isRefreshing = false;
 let failedQueue = []; // Refresh davomida kelgan so'rovlarni saqlash
+let lastNetworkErrorToast = 0;
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
@@ -44,9 +45,16 @@ api.interceptors.response.use(
 
     // Tarmoq xatosi
     if (error.message === 'Network Error' && !error.response) {
-      import('react-hot-toast').then(({ default: toast }) => {
-        toast.error("Tarmoq xatosi: Server bilan ulanish yo'q", { id: 'network-error' });
-      });
+      const now = Date.now();
+      if (now - lastNetworkErrorToast > 10000) {
+        lastNetworkErrorToast = now;
+        import('react-hot-toast').then(({ default: toast }) => {
+          toast.error("Tarmoq xatosi: Server bilan ulanish yo'q", { 
+            id: 'network-error',
+            duration: 4000
+          });
+        });
+      }
       return Promise.reject(error);
     }
 
