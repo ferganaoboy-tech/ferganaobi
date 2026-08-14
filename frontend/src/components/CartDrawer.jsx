@@ -287,7 +287,7 @@ const CartDrawer = () => {
                           {t === 'retail' ? 'Chakana' : 'Sotuv'}
                         </span>
                         <span className={`text-[10px] leading-none ${orderType === t ? 'text-accent font-[600]' : 'text-tertiary font-[500]'}`}>
-                          {t === 'retail' ? 'Hamma uchun (dona)' : 'Optom xaridorlar'}
+                          {t === 'retail' ? 'Optom (arzonlashtirilgan)' : 'Hamma uchun (standart)'}
                         </span>
                       </button>
                     ))}
