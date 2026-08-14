@@ -110,11 +110,17 @@ const AiOrderParserModal = ({ isOpen, onClose, cartWarehouse }) => {
   const handleAddAll = () => {
     let addedCount = 0;
     let hasWarehouseMismatch = false;
+    let effectiveWarehouse = cartWarehouse;
 
     parsedItems.forEach(item => {
       if (item.found && item.product) {
         const prodWarehouseId = item.product.warehouse?._id || item.product.warehouse;
-        if (!cartWarehouse || cartWarehouse === prodWarehouseId) {
+        
+        if (!effectiveWarehouse) {
+          effectiveWarehouse = prodWarehouseId;
+        }
+
+        if (String(effectiveWarehouse) === String(prodWarehouseId)) {
           const added = addToCart(item.product, item.requestedQty, item.product.unit || 'rulon');
           if(added) addedCount++;
         } else {

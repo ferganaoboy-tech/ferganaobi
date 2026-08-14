@@ -55,13 +55,20 @@ const ProductSearchAndFilters = ({
                     e.stopPropagation();
                     let addedCount = 0;
                     let hasWarehouseMismatch = false;
+                    let effectiveWarehouse = cartWarehouse;
+
                     products.slice(0, 50).forEach(product => {
                       const suggestUnit = cartUnits[product._id] || product.unit || 'rulon';
                       const suggestRemaining = getRemainingStock(product, suggestUnit);
                       if (suggestRemaining > 0) {
                         const quantity = Math.min(cartQuantities[product._id] || 1, suggestRemaining);
                         const prodWarehouseId = product.warehouse?._id || product.warehouse;
-                        if (!cartWarehouse || cartWarehouse === prodWarehouseId) {
+                        
+                        if (!effectiveWarehouse) {
+                          effectiveWarehouse = prodWarehouseId;
+                        }
+
+                        if (String(effectiveWarehouse) === String(prodWarehouseId)) {
                            addToCart(product, quantity, suggestUnit);
                            addedCount++;
                         } else {
