@@ -119,7 +119,11 @@ export const CartProvider = ({ children }) => {
               ...item,
               unitPrice,
               productName: updatedProduct.brand || updatedProduct.artikul,
-              artikul: updatedProduct.artikul
+              artikul: updatedProduct.artikul,
+              wholesalePrice: updatedProduct.wholesalePrice,
+              pricePerRoll: updatedProduct.pricePerRoll,
+              rollsPerBox: updatedProduct.rollsPerBox,
+              rollLength: updatedProduct.rollLength
             };
           }
           return item;
