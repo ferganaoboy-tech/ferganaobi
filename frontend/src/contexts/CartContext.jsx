@@ -25,8 +25,9 @@ const loadCartFromStorage = () => {
 
 const saveCartToStorage = (items) => {
   // ✅ FIX #9: productDetail serialize qilinmaydi — schema mismatch oldini olish
-  const minimal = items.map(({ product, productName, artikul, unit, quantity, unitPrice, discount, isCustomPrice }) => ({
-    product, productName, artikul, unit, quantity, unitPrice, discount: discount || 0, isCustomPrice: isCustomPrice || false
+  const minimal = items.map(({ product, productName, artikul, unit, quantity, unitPrice, discount, isCustomPrice, warehouse }) => ({
+    product, productName, artikul, unit, quantity, unitPrice, discount: discount || 0, isCustomPrice: isCustomPrice || false,
+    warehouse: warehouse ? String(warehouse) : null // ✅ Har bir elementda saqlanadi
   }));
   localStorage.setItem(CART_KEY, JSON.stringify(minimal));
 };
@@ -35,17 +36,24 @@ export const CartProvider = ({ children }) => {
   const { user } = useAuth();
 
   // State — productDetail faqat runtime'da, localStorage'da yo'q
-  const [cartItems, setCartItems] = useState([]);
+  // ✅ Lazy State Initialization: Ilk renderdayoq ma'lumotlar bilan to'ladi
+  const [cartItems, setCartItems] = useState(() => loadCartFromStorage());
   const [productDetails, setProductDetails] = useState({}); // { productId: productDoc }
-  const [cartWarehouse, setCartWarehouse] = useState(() => localStorage.getItem(CART_WH_KEY) || null);
+  
+  // ✅ Auto-Recovery Fallback Engine
+  const [cartWarehouse, setCartWarehouse] = useState(() => {
+    const savedWh = localStorage.getItem(CART_WH_KEY);
+    if (savedWh) return savedWh;
+    // Agar xotira tozalangan bo'lsa, savatdagi birinchi mahsulotdan tiklaymiz
+    const savedItems = loadCartFromStorage();
+    if (savedItems.length > 0 && savedItems[0].warehouse) {
+      return savedItems[0].warehouse;
+    }
+    return null;
+  });
+  
   const [orderType, setOrderType] = useState(() => localStorage.getItem(CART_TYPE_KEY) || 'wholesale');
   const [cartOpen, setCartOpen] = useState(false);
-
-  // ─── localStorage'dan yuklash (birinchi render) ───
-  useEffect(() => {
-    const savedItems = loadCartFromStorage();
-    setCartItems(savedItems);
-  }, []);
 
   // ─── localStorage saqlash (har o'zgarishda) ───
   useEffect(() => {
@@ -173,7 +181,8 @@ export const CartProvider = ({ children }) => {
           quantity: Number(quantity),
           unitPrice: price,
           discount: 0,
-          isCustomPrice: false
+          isCustomPrice: false,
+          warehouse: String(productWarehouseId)
         };
         setProductDetails(prev => ({ ...prev, [product._id]: product }));
         setCartItems([newItem]);
@@ -226,7 +235,8 @@ export const CartProvider = ({ children }) => {
             quantity: Number(quantity),
             unitPrice: price,
             discount: 0,
-            isCustomPrice: false
+            isCustomPrice: false,
+            warehouse: String(productWarehouseId)
           }
         ];
       }

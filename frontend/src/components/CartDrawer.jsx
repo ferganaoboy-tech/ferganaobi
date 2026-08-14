@@ -99,7 +99,8 @@ const CartDrawer = () => {
 
   if (!cartOpen) return null;
 
-  const selectedWarehouse = warehouses.find(w => w._id === cartWarehouse);
+  // ✅ Strict Type-Safe Match (Defense in Depth)
+  const selectedWarehouse = warehouses.find(w => String(w._id) === String(cartWarehouse));
   const warehouseName = selectedWarehouse ? selectedWarehouse.name : 'Tanlanmagan';
 
   const handleCheckoutChange = (e) => {
