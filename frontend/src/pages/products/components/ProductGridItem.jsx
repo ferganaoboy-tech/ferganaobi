@@ -37,7 +37,7 @@ const ProductGridItem = React.forwardRef(({
     return (
       <div 
         ref={ref} 
-        className="relative bg-gray-900 rounded-2xl overflow-hidden aspect-[3/4] cursor-pointer group transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_16px_32px_-8px_rgba(0,0,0,0.2)] shadow-md select-none"
+        className="relative bg-gray-900 rounded-2xl overflow-hidden aspect-[3/4] cursor-pointer group transition-all duration-300 hover:shadow-[0_16px_32px_-8px_rgba(0,0,0,0.2)] shadow-md select-none"
         onClick={() => {
           if (product.images && product.images.length > 0) setViewerImages(product.images);
         }}
@@ -201,7 +201,7 @@ const ProductGridItem = React.forwardRef(({
 
   // ===== BOSHQA MAHSULOTLAR UCHUN STANDARD UI =====
   return (
-    <div ref={ref} className="bg-surface border border-subtle rounded-2xl flex flex-col relative overflow-hidden transition-all duration-300 hover:shadow-[0_12px_24px_-4px_rgba(0,0,0,0.08),0_4px_8px_-2px_rgba(0,0,0,0.04)] hover:-translate-y-1 hover:border-slate-300/80 group cursor-pointer">
+    <div ref={ref} className="bg-surface border border-subtle rounded-2xl flex flex-col relative overflow-hidden transition-all duration-300 hover:shadow-[0_12px_24px_-4px_rgba(0,0,0,0.08),0_4px_8px_-2px_rgba(0,0,0,0.04)] hover:border-slate-300/80 group cursor-pointer">
       {product.warehouse?.color && (
         <div className="absolute top-0 left-0 right-0 h-1.5 z-10" style={{ backgroundColor: product.warehouse.color }}></div>
       )}
