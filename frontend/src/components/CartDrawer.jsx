@@ -585,10 +585,14 @@ const CartDrawer = () => {
                 <div className="flex items-center gap-2">
                   <div className="relative flex items-center shadow-sm">
                     <input
-                      type="number"
-                      value={customTotal !== '' ? customTotal : totalAmount}
-                      onChange={(e) => setCustomTotal(e.target.value)}
-                      className="w-[150px] h-10 pl-3 pr-12 bg-surface border border-subtle focus:border-primary focus:ring-0 rounded-md text-[18px] font-[700] text-primary outline-none transition-all shadow-sm"
+                      type="text"
+                      inputMode="numeric"
+                      value={customTotal !== '' ? Number(customTotal).toLocaleString('ru-RU') : totalAmount.toLocaleString('ru-RU')}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        setCustomTotal(raw);
+                      }}
+                      className="w-[190px] h-10 pl-3 pr-14 bg-surface border border-subtle focus:border-primary focus:ring-0 rounded-md text-[19px] font-[700] text-primary outline-none transition-all shadow-sm font-mono tracking-tight"
                     />
                     <span className="absolute right-3 text-[11px] font-[600] text-gray-500 uppercase tracking-widest pointer-events-none">UZS</span>
                   </div>
