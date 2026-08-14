@@ -271,19 +271,24 @@ const CartDrawer = () => {
                 
                 <div className="border-t border-subtle pt-3">
                   <label className={labelClass}>Savdo turi</label>
-                  <div className="flex bg-subtle/50 p-1 rounded-[10px] border border-subtle shadow-inner w-full mt-1">
+                  <div className="flex bg-subtle/50 p-1 rounded-[12px] border border-subtle shadow-inner w-full mt-1 h-[48px]">
                     {['wholesale', 'retail'].map(t => (
                       <button 
                         key={t}
                         type="button"
                         onClick={() => setOrderType(t)}
-                        className={`flex-1 h-8 text-[13px] rounded-md transition-all duration-200 ${
+                        className={`flex-1 flex flex-col items-center justify-center rounded-[8px] transition-all duration-200 ${
                           orderType === t 
-                            ? 'bg-surface shadow-sm border border-subtle/60 text-primary font-[600]' 
-                            : 'text-secondary hover:text-primary border border-transparent font-[500]'
+                            ? 'bg-surface shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-subtle/80' 
+                            : 'border border-transparent hover:bg-surface/40'
                         }`}
                       >
-                        {t === 'retail' ? 'Chakana' : 'Sotuv'}
+                        <span className={`text-[13px] leading-none mb-0.5 ${orderType === t ? 'text-primary font-[700]' : 'text-secondary font-[600]'}`}>
+                          {t === 'retail' ? 'Chakana' : 'Sotuv'}
+                        </span>
+                        <span className={`text-[10px] leading-none ${orderType === t ? 'text-accent font-[600]' : 'text-tertiary font-[500]'}`}>
+                          {t === 'retail' ? 'Hamma uchun (dona)' : 'Optom xaridorlar'}
+                        </span>
                       </button>
                     ))}
                   </div>
