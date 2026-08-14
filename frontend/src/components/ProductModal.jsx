@@ -157,9 +157,17 @@ const ProductModal = ({ isOpen, onClose, product = null }) => {
           : `≈ ${Number(inactiveValue).toFixed(2)} USD`)
       : '';
 
+    // Determine sublabel based on the db field name to clarify the backwards terminology
+    let subLabel = '';
+    if (uzsName === 'wholesalePrice') subLabel = "(Optom narxi)";
+    if (uzsName === 'pricePerRoll') subLabel = "(Standart narxi)";
+
     return (
       <div className="flex flex-col">
-        <label className={labelClass}>{label} {required && '*'}</label>
+        <label className={labelClass}>
+          {label} {required && '*'} 
+          {subLabel && <span className="text-[9px] text-accent font-bold ml-1.5 normal-case tracking-normal">{subLabel}</span>}
+        </label>
         <div className="relative flex items-center">
           <input
             type="number"
