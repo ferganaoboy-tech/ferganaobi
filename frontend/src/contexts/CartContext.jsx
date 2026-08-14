@@ -24,10 +24,11 @@ const loadCartFromStorage = () => {
 };
 
 const saveCartToStorage = (items) => {
-  // ✅ FIX #9: productDetail serialize qilinmaydi — schema mismatch oldini olish
-  const minimal = items.map(({ product, productName, artikul, unit, quantity, unitPrice, discount, isCustomPrice, warehouse }) => ({
+  // ✅ FIX #9: productDetail serialize qilinmaydi, lekin narx hisoblash uchun kerakli maydonlar saqlanadi
+  const minimal = items.map(({ product, productName, artikul, unit, quantity, unitPrice, discount, isCustomPrice, warehouse, wholesalePrice, pricePerRoll, rollsPerBox, rollLength }) => ({
     product, productName, artikul, unit, quantity, unitPrice, discount: discount || 0, isCustomPrice: isCustomPrice || false,
-    warehouse: warehouse ? String(warehouse) : null // ✅ Har bir elementda saqlanadi
+    warehouse: warehouse ? String(warehouse) : null,
+    wholesalePrice, pricePerRoll, rollsPerBox, rollLength
   }));
   localStorage.setItem(CART_KEY, JSON.stringify(minimal));
 };
@@ -94,10 +95,10 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     setCartItems(prevItems =>
       prevItems.map(item => {
-        const detail = productDetails[item.product];
-        if (!detail) return item;
-        const unitPrice = getUnitPrice(detail, item.unit, orderType);
-        return { ...item, unitPrice, isCustomPrice: false };
+        const detail = productDetails[item.product] || item; // Fallback to item itself if page reloaded
+        if (!detail || detail.wholesalePrice === undefined) return item;
+        const unitPrice = item.isCustomPrice ? item.unitPrice : getUnitPrice(detail, item.unit, orderType);
+        return { ...item, unitPrice, isCustomPrice: item.isCustomPrice || false };
       })
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -182,7 +183,11 @@ export const CartProvider = ({ children }) => {
           unitPrice: price,
           discount: 0,
           isCustomPrice: false,
-          warehouse: String(productWarehouseId)
+          warehouse: String(productWarehouseId),
+          wholesalePrice: product.wholesalePrice,
+          pricePerRoll: product.pricePerRoll,
+          rollsPerBox: product.rollsPerBox,
+          rollLength: product.rollLength
         };
         setProductDetails(prev => ({ ...prev, [product._id]: product }));
         setCartItems([newItem]);
@@ -236,7 +241,11 @@ export const CartProvider = ({ children }) => {
             unitPrice: price,
             discount: 0,
             isCustomPrice: false,
-            warehouse: String(productWarehouseId)
+            warehouse: String(productWarehouseId),
+            wholesalePrice: product.wholesalePrice,
+            pricePerRoll: product.pricePerRoll,
+            rollsPerBox: product.rollsPerBox,
+            rollLength: product.rollLength
           }
         ];
       }
