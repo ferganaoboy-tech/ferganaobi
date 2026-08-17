@@ -14,8 +14,17 @@ const pinLimiter = rateLimit({
   message: { success: false, message: "Juda ko'p PIN urinish. 15 daqiqadan so'ng qayta urinib ko'ring." },
   skipSuccessfulRequests: true, // Muvaffaqiyatli loginlarni sanama
 });
+// ✅ FIX: Standard login uchun rate limit (Brute-force himoyasi)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 daqiqa
+  max: 5, // Oddiy login uchun qat'iyroq (5 ta urinish)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Juda ko'p xato urinish. 15 daqiqadan so'ng qayta urinib ko'ring." },
+  skipSuccessfulRequests: true,
+});
 
-router.post('/login',     login);
+router.post('/login',     loginLimiter, login);
 router.post('/login-pin', pinLimiter, require('../controllers/authController').loginPin);
 router.post('/refresh',   refreshToken); // HttpOnly cookie orqali
 router.post('/logout',    logout);       // Cookie'ni tozalash

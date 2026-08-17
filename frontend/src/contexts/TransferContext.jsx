@@ -30,7 +30,9 @@ export const TransferProvider = ({ children }) => {
   // Save to local storage on change
   useEffect(() => {
     if (user?.warehouse) {
-      localStorage.setItem(`transfer_cart_${user.warehouse}`, JSON.stringify(transferItems));
+      localStorage.setItem(`transfer_cart_${user.warehouse}`, JSON.stringify(transferItems, (key, value) => {
+        return value === undefined ? null : value;
+      }));
     }
   }, [transferItems, user?.warehouse]);
 

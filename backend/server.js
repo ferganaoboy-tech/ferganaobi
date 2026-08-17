@@ -66,6 +66,13 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser()); // Refresh token HttpOnly cookie'sini o'qish uchun
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// ✅ Xavfsizlik: Helmet orqali HTTP sarlavhalarini himoyalash
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // API uchun CORS bilan ishlashi uchun
+  contentSecurityPolicy: false, // React (Vite) ilovalari alohida ishlaganda bloklanmasligi uchun
+}));
+
 // ✅ FIX: NoSQL Injection himoyasi (Express 5.x ga moslashgan custom versiya)
 // Express 5.x da req.query getter hisoblanadi, shuning uchun express-mongo-sanitize xato beradi.
 const sanitizeMongoObj = (obj) => {
@@ -93,6 +100,10 @@ app.use((req, res, next) => {
 });
 
 // Database Connection
+// ✅ Database Optimizatsiyasi: Jonli (Production) muhitda indekslarni qayta qurishni to'xtatish
+const isProduction = process.env.NODE_ENV === 'production';
+mongoose.set('autoIndex', !isProduction);
+
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/wallpaper-crm', {
     maxPoolSize: 200
