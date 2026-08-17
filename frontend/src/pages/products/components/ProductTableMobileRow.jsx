@@ -219,7 +219,6 @@ const ProductTableMobileRow = React.forwardRef(({
                     const added = addToCart(product, quantity, unit);
                     if (added === true) {
                       haptics.light();
-                      toast.success(`${product.brand || product.artikul} (${quantity} ${unit}) savatga qo'shildi!`);
                       clearSearch();
                     }
                   }

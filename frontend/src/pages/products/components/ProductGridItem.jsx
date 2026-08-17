@@ -181,9 +181,8 @@ const ProductGridItem = React.forwardRef(({
                   } else {
                     const added = addToCart(product, quantity, unit);
                     if (added === true) {
-                      toast.success(`${product.brand || product.artikul} savatga qo'shildi!`);
-                      clearSearch();
                       haptics.light();
+                      clearSearch();
                     }
                   }
                 }}
@@ -373,7 +372,7 @@ const ProductGridItem = React.forwardRef(({
                 } else {
                   const added = addToCart(product, quantity, unit);
                   if (added === true) {
-                    toast.success(`${product.brand || product.artikul} (${quantity} ${unit}) savatga qo'shildi!`);
+                    haptics.light();
                     clearSearch();
                   }
                 }

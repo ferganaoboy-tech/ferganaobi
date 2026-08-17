@@ -95,8 +95,8 @@ const ProductSearchAndFilters = ({
                       }
                     });
                     if(addedCount > 0) {
-                      toast.success(`${addedCount} ta maxsulot savatga qo'shildi!`);
-                      if(hasWarehouseMismatch) toast.error("Ba'zi maxsulotlar boshqa skladda bo'lgani uchun qo'shilmadi.");
+                      toast.success(`${addedCount} ta maxsulot savatga qo'shildi!`, { id: 'bulk-add' });
+                      if(hasWarehouseMismatch) toast.error("Ba'zi maxsulotlar boshqa skladda bo'lgani uchun qo'shilmadi.", { id: 'bulk-err-warehouse' });
                       clearSearch();
                     } else if (hasWarehouseMismatch) {
                       toast.error("Maxsulotlar boshqa skladda bo'lgani uchun qo'shilmadi.");
@@ -207,7 +207,7 @@ const ProductSearchAndFilters = ({
                               } else {
                                 const added = addToCart(product, quantity, unit);
                                 if (added === true) {
-                                  toast.success(`${product.brand || product.artikul} (${quantity} ${unit}) savatga qo'shildi!`);
+                                  haptics.light();
                                   clearSearch();
                                 }
                               }
