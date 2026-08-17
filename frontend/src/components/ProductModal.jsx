@@ -210,14 +210,14 @@ const ProductModal = ({ isOpen, onClose, product = null }) => {
             </button>
           </div>
         </div>
-        <div className="h-6 mt-1.5 flex items-center">
-          {convertedText && (
-            <div className="text-[12px] font-[700] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md flex items-center gap-1.5 shadow-sm border border-emerald-100 dark:border-emerald-800/50">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
-              {convertedText}
-            </div>
-          )}
-        </div>
+        <div className="h-6 mt-2 flex items-center">
+            {convertedText && (
+              <div className="text-[12px] font-[600] text-slate-600 dark:text-slate-300 bg-slate-100/80 dark:bg-slate-800/60 px-2 py-1 rounded-md flex items-center gap-1.5 border border-slate-200/80 dark:border-slate-700/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 dark:text-slate-500"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                {convertedText}
+              </div>
+            )}
+          </div>
       </div>
     );
   };
@@ -521,10 +521,10 @@ const ProductModal = ({ isOpen, onClose, product = null }) => {
                   </div>
                   <h3 className="text-15 font-[600] text-primary">2. Narx va Zaxira</h3>
                 </div>
-                <span className="text-12 bg-app px-3 py-1.5 rounded-lg border border-subtle text-secondary font-[500] flex items-center gap-2">
-                  <span>Kurs:</span>
-                  <span className="font-mono text-primary">1 USD = {usdRate.toLocaleString()} so'm</span>
-                </span>
+                  <span className="text-[13px] bg-slate-100/80 dark:bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 font-[500] flex items-center gap-2 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                    <span className="text-slate-400">Kurs:</span>
+                    <span className="font-[600] tracking-tight">1 USD = {usdRate.toLocaleString()} so'm</span>
+                  </span>
               </div>
 
               <div className="space-y-6">

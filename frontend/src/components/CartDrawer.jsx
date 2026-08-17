@@ -598,8 +598,8 @@ const CartDrawer = () => {
                   </div>
                   
                   {usdRate > 0 && (
-                    <div className="flex items-center gap-1.5 text-[13px] font-[700] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1 rounded-md shadow-sm border border-emerald-100 dark:border-emerald-800/50 whitespace-nowrap">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                    <div className="flex items-center gap-1.5 text-[13px] font-[600] text-slate-600 dark:text-slate-300 bg-slate-100/80 dark:bg-slate-800/60 px-2.5 py-1 rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.02)] border border-slate-200/80 dark:border-slate-700/80 whitespace-nowrap transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 dark:text-slate-500"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
                       {((customTotal !== '' ? Number(customTotal) : totalAmount) / usdRate).toFixed(2)} USD
                     </div>
                   )}
