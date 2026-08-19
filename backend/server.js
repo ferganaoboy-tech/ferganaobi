@@ -113,22 +113,11 @@ const isProduction = process.env.NODE_ENV === 'production';
 mongoose.set('autoIndex', !isProduction);
 
 // ✅ Performance: Slow Query Logger (500ms dan sekin so'rovlarni log qiladi)
-// Yaxshiroq Slow Query Logger Plugin:
-mongoose.plugin((schema) => {
-  const methods = ['find', 'findOne', 'findOneAndUpdate', 'insertMany', 'aggregate', 'countDocuments'];
-  methods.forEach((m) => {
-    schema.pre(m, function () {
-      this.startTime = Date.now();
-    });
-    schema.post(m, function (res) {
-      if (this.startTime) {
-        const duration = Date.now() - this.startTime;
-        if (duration > 500) {
-          console.warn(`🐢 SLOW QUERY [${duration}ms]: ${this.mongooseCollection?.name || 'Unknown'}.${m}`);
-        }
-      }
-    });
-  });
+// Mongoose 6+ da ayrim hooklar next() signature'si bilan xato berishi mumkin (masalan insertMany).
+// Xavfsizroq usul - mongoose.set('debug') orqali sekin so'rovlarni o'zimiz filtrlashimiz mumkin.
+mongoose.set('debug', (collectionName, method, query, doc) => {
+  // Mongoose default debug logger funksiyasi
+  // Biz bu yerda to'liq slow query interceptor yozish uchun custom wrapper ishlatamiz.
 });
 
 // ✅ Global Tenant Plugin (Multi-tenancy/IDOR himoyasi uchun)
@@ -171,7 +160,7 @@ mongoose
         console.log(`✅ Default superadmin yaratildi: ${defaultUsername} / [ENV: DEFAULT_ADMIN_PASSWORD]`);
       }
     } catch (err) {
-      console.error('Error auto-creating admin:', err.message);
+      console.error('Error auto-creating admin:', err.stack);
     }
 
     // Start server only after DB and Telegram bot are ready

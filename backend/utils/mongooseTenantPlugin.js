@@ -9,7 +9,7 @@ module.exports = function tenantPlugin(schema) {
   ];
 
   readAndUpdateMethods.forEach(method => {
-    schema.pre(method, function (next) {
+    schema.pre(method, function () {
       const store = tenantStorage.getStore();
       // Agar joriy foydalanuvchi qaysidir warehouse'ga biriktirilgan bo'lsa
       // va ushbu Schema da 'warehouse' field bo'lsa:
@@ -32,41 +32,42 @@ module.exports = function tenantPlugin(schema) {
           }
         }
       }
-      next();
     });
   });
 
   // Aggregation (Dashboard/Stats) so'rovlariga aralashamiz
-  schema.pre('aggregate', function (next) {
+  schema.pre('aggregate', function () {
     const store = tenantStorage.getStore();
     // Aggregation qilinayotgan Model 'warehouse' ni o'z ichiga oladimi?
     // Aggregation model instance emas, shuning uchun schema.paths dan izlaymiz
     if (store && store.warehouseId && schema.paths.warehouse) {
       this.pipeline().unshift({ $match: { warehouse: store.warehouseId } });
     }
-    next();
   });
 
   // Yangi hujjat qo'shilayotganda majburiy warehouse beramiz (Mass Assignment block)
-  schema.pre('save', function (next) {
+  schema.pre('save', function () {
     const store = tenantStorage.getStore();
     if (store && store.warehouseId && this.schema.paths.warehouse) {
       // Dasturchi boshqa warehouse yuborgan bo'lsa ham uning o'z filialiga tushadi
       this.warehouse = store.warehouseId;
     }
-    next();
   });
 
   // insertMany orqali birdaniga ko'p hujjat qo'shilayotganda
-  schema.pre('insertMany', function (next, docs) {
+  schema.pre('insertMany', function (docsOrNext, docs) {
     const store = tenantStorage.getStore();
+    const actualDocs = Array.isArray(docsOrNext) ? docsOrNext : docs;
+    const nextFunc = typeof docsOrNext === 'function' ? docsOrNext : (typeof docs === 'function' ? docs : null);
+
     if (store && store.warehouseId && schema.paths.warehouse) {
-      if (Array.isArray(docs)) {
-        docs.forEach(doc => {
+      if (Array.isArray(actualDocs)) {
+        actualDocs.forEach(doc => {
           doc.warehouse = store.warehouseId;
         });
       }
     }
-    next();
+    
+    if (nextFunc) nextFunc();
   });
 };
