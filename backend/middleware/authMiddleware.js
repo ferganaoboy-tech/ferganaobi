@@ -41,7 +41,16 @@ const protect = async (req, res, next) => {
       });
     }
 
-    next();
+    // ✅ Multi-tenancy Context ni o'rnatish
+    const { tenantStorage } = require('../utils/tenantContext');
+    
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      // Kassirlar uchun faqat o'z filiali ko'rinadi
+      tenantStorage.run({ warehouseId: req.user.warehouse }, next);
+    } else {
+      // Admin va Superadminlar hamma narsani ko'ra oladi (Context bo'sh)
+      tenantStorage.run({}, next);
+    }
   } catch (error) {
     // Muddati o'tgan token — frontendga aniq signal berish
     if (error.name === 'TokenExpiredError') {

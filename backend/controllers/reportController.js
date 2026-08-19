@@ -136,20 +136,47 @@ exports.getSalesReport = async (req, res) => {
       ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}),
     };
 
-    const [orders, returns] = await Promise.all([
-      Order.find(orderMatch)
-        .populate('items.product', 'brand collection artikul images')
-        .populate('customer', 'name phone type')
-        .lean(),
-      Return.find(returnMatch)
-        .populate('items.product', 'brand collection artikul')
-        .populate('customer', 'name phone type')
-        .lean(),
-    ]);
+    // 4. Daily Trend Chart Initialization
+    let startD, endD;
+    if (startDate && endDate) { startD = toUTCStart(startDate); endD = toUTCEnd(endDate); }
+    else if (startDate) { startD = toUTCStart(startDate); endD = new Date(); }
+    else if (endDate) { endD = toUTCEnd(endDate); startD = new Date(endD); startD.setDate(startD.getDate() - 29); }
+    else { endD = new Date(); startD = new Date(); startD.setDate(startD.getDate() - 29); }
+
+    const diffDays  = Math.floor((endD - startD) / 86400000);
+    const cappedDays = Math.min(Math.max(diffDays, 0), 90);
+    const chartDataMap = {};
+    
+    const getLocalYYYYMMDD = (dateStrOrObj) => {
+      const d = new Date(new Date(dateStrOrObj).toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    for (let i = 0; i <= cappedDays; i++) {
+      const d = new Date(startD);
+      d.setDate(d.getDate() + i);
+      const dateStr = getLocalYYYYMMDD(d);
+      const displayDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+      chartDataMap[dateStr] = { date: dateStr, displayDate, savdo: 0, vozvrat: 0, foyda: 0 };
+    }
+
+    // 🔥 FIX: 512MB RAM ni crash qilishdan saqlash uchun Cursor / Streaming qo'llanilmoqda
+    // O(N) memory o'rniga O(1) memory ishlatiladi, minglab buyurtmalar bittadan aylanadi
+    const orderCursor = Order.find(orderMatch)
+      .populate('items.product', 'brand collection artikul images')
+      .populate('customer', 'name phone type')
+      .lean().cursor();
+
+    const returnCursor = Return.find(returnMatch)
+      .populate('items.product', 'brand collection artikul')
+      .populate('customer', 'name phone type')
+      .lean().cursor();
 
     // Global KPIs
     let totalRevenue = 0, totalProfit = 0, totalDebt = 0, totalQuantity = 0;
     let totalReturnAmount = 0, totalReturnedQty = 0, totalLostProfit = 0;
+    let ordersLength = 0;
+    let returnsLength = 0;
     
     // Breakdowns
     const paymentBreakdown = { naqd: 0, nasiya: 0, qisman: 0 };
@@ -161,13 +188,21 @@ exports.getSalesReport = async (req, res) => {
     const brandStats    = {};
     const customerStats = {};
 
-    // ── PROCESS ORDERS ──
-    orders.forEach((order) => {
+    // ── PROCESS ORDERS (Stream) ──
+    for await (const order of orderCursor) {
+      ordersLength++;
       const amount = order.totalAmount || 0;
       const profit = order.totalProfit || 0;
       totalRevenue += amount;
       totalProfit  += profit;
       totalDebt    += order.debtAmount || 0;
+
+      // Chart data
+      const dateStr = getLocalYYYYMMDD(order.createdAt);
+      if (chartDataMap[dateStr]) {
+        chartDataMap[dateStr].savdo += amount;
+        chartDataMap[dateStr].foyda += profit;
+      }
 
       // Payment & Type
       const pt = order.paymentType || 'naqd';
@@ -194,6 +229,17 @@ exports.getSalesReport = async (req, res) => {
         customerStats[cId].ordersCount += 1;
       }
 
+      // ✅ FIX: Global Discount (overrideTotalAmount) ni mahsulotlar kesimiga tarqatish
+      // Busiz Mahsulotlar (ABC) tahlilida daromad noto'g'ri (shishib ketgan) bo'lib qoladi.
+      let calculatedOrderTotal = 0;
+      (order.items || []).forEach(i => {
+        calculatedOrderTotal += (i.unitPrice * i.quantity) * (1 - (i.discount || 0) / 100);
+      });
+      const hasGlobalDiscount = order.overrideTotalAmount !== undefined && order.overrideTotalAmount !== null;
+      const globalDiscountRatio = (hasGlobalDiscount && calculatedOrderTotal > 0) 
+        ? (order.overrideTotalAmount / calculatedOrderTotal) 
+        : 1;
+
       // Product stats
       (order.items || []).forEach((item) => {
         if (!item.product?._id) return;
@@ -212,7 +258,12 @@ exports.getSalesReport = async (req, res) => {
         }
 
         const qty = item.quantity || 0;
-        const sub = item.subtotal ?? (item.quantity * item.unitPrice) ?? 0;
+        
+        // Asl subtotal
+        const rawSub = (item.unitPrice * qty) * (1 - (item.discount || 0) / 100);
+        // Chegirma qo'llanilgan yakuniy subtotal
+        const sub = rawSub * globalDiscountRatio;
+        
         const cost = (item.unitCost || 0) * qty;
         
         productStats[pId].soldQty += qty;
@@ -227,19 +278,27 @@ exports.getSalesReport = async (req, res) => {
         brandStats[brand].profit  += (sub - cost);
         brandStats[brand].qty     += qty;
       });
-    });
+    }
 
-    // ── PROCESS RETURNS ──
-    returns.forEach((ret) => {
-      totalReturnAmount += ret.totalRefundAmount || 0;
-      totalLostProfit   += (ret.totalRefundAmount || 0) - (ret.totalRefundCost || 0);
+    // ── PROCESS RETURNS (Stream) ──
+    for await (const ret of returnCursor) {
+      returnsLength++;
+      const rAmount = ret.totalRefundAmount || 0;
+      totalReturnAmount += rAmount;
+      totalLostProfit   += rAmount - (ret.totalRefundCost || 0);
+
+      // Chart data
+      const dateStr = getLocalYYYYMMDD(ret.createdAt);
+      if (chartDataMap[dateStr]) {
+        chartDataMap[dateStr].vozvrat += rAmount;
+      }
 
       // Customer returns deduction
       if (ret.customer?._id) {
         const cId = ret.customer._id.toString();
         if (customerStats[cId]) {
-          customerStats[cId].revenue = Math.max(0, customerStats[cId].revenue - (ret.totalRefundAmount || 0));
-          customerStats[cId].profit = Math.max(0, customerStats[cId].profit - ((ret.totalRefundAmount || 0) - (ret.totalRefundCost || 0)));
+          customerStats[cId].revenue = customerStats[cId].revenue - rAmount;
+          customerStats[cId].profit = customerStats[cId].profit - (rAmount - (ret.totalRefundCost || 0));
         }
       }
 
@@ -266,28 +325,30 @@ exports.getSalesReport = async (req, res) => {
         }
 
         productStats[pId].returnedQty += qty;
-        productStats[pId].revenue = Math.max(0, productStats[pId].revenue - refundAmt);
-        productStats[pId].cost = Math.max(0, productStats[pId].cost - refundCost);
-        productStats[pId].profit = Math.max(0, productStats[pId].profit - lostProf);
+        productStats[pId].revenue = productStats[pId].revenue - refundAmt;
+        productStats[pId].cost = productStats[pId].cost - refundCost;
+        productStats[pId].profit = productStats[pId].profit - lostProf;
 
         if (brandStats[brand]) {
-          brandStats[brand].revenue = Math.max(0, brandStats[brand].revenue - refundAmt);
-          brandStats[brand].profit = Math.max(0, brandStats[brand].profit - lostProf);
-          brandStats[brand].qty = Math.max(0, brandStats[brand].qty - qty);
+          brandStats[brand].revenue = brandStats[brand].revenue - refundAmt;
+          brandStats[brand].profit = brandStats[brand].profit - lostProf;
+          brandStats[brand].qty = brandStats[brand].qty - qty;
         }
       });
-    });
+    }
 
-    totalProfit = Math.max(0, totalProfit - totalLostProfit);
+    // Matematikada sof foyda (net profit) manfiy bo'lishi mumkin (agar vozvrat savdodan oshib ketsa)
+    // Shu sababli Math.max(0, ...) olib tashlandi — bu haqiqiy moliya talabi (Senior qadam).
+    totalProfit = totalProfit - totalLostProfit;
     const netRevenue  = totalRevenue - totalReturnAmount;
-    const netQuantity = Math.max(0, totalQuantity - totalReturnedQty);
-    const avgCheck    = orders.length > 0 ? Math.round(totalRevenue / orders.length) : 0;
+    const netQuantity = totalQuantity - totalReturnedQty;
+    const avgCheck    = ordersLength > 0 ? Math.round(totalRevenue / ordersLength) : 0;
 
     // ── DEEP ANALYTICS FORMATTING ──
     
     // 1. ABC Analysis for Products
     const productsArray = Object.values(productStats).map(p => {
-      const netQty = Math.max(0, p.soldQty - p.returnedQty);
+      const netQty = p.soldQty - p.returnedQty;
       const margin = p.revenue > 0 ? (p.profit / p.revenue) * 100 : 0;
       const returnRate = p.soldQty > 0 ? (p.returnedQty / p.soldQty) * 100 : 0;
       return { ...p, netQty, margin, returnRate };
@@ -317,45 +378,6 @@ exports.getSalesReport = async (req, res) => {
       .filter(b => b.revenue > 0)
       .sort((a, b) => b.revenue - a.revenue);
 
-    // 4. Daily Trend Chart
-    let startD, endD;
-    if (startDate && endDate) { startD = toUTCStart(startDate); endD = toUTCEnd(endDate); }
-    else if (startDate) { startD = toUTCStart(startDate); endD = new Date(); }
-    else if (endDate) { endD = toUTCEnd(endDate); startD = new Date(endD); startD.setDate(startD.getDate() - 29); }
-    else { endD = new Date(); startD = new Date(); startD.setDate(startD.getDate() - 29); }
-
-    const diffDays  = Math.floor((endD - startD) / 86400000);
-    const cappedDays = Math.min(Math.max(diffDays, 0), 90);
-    const chartDataMap = {};
-    
-    const getLocalYYYYMMDD = (dateStrOrObj) => {
-      const d = new Date(new Date(dateStrOrObj).toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
-
-    for (let i = 0; i <= cappedDays; i++) {
-      const d = new Date(startD);
-      d.setDate(d.getDate() + i);
-      const dateStr = getLocalYYYYMMDD(d);
-      const displayDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-      chartDataMap[dateStr] = { date: dateStr, displayDate, savdo: 0, vozvrat: 0, foyda: 0 };
-    }
-
-    orders.forEach(order => {
-      const dateStr = getLocalYYYYMMDD(order.createdAt);
-      if (chartDataMap[dateStr]) {
-        chartDataMap[dateStr].savdo += order.totalAmount || 0;
-        chartDataMap[dateStr].foyda += order.totalProfit || 0;
-      }
-    });
-
-    returns.forEach(ret => {
-      const dateStr = getLocalYYYYMMDD(ret.createdAt);
-      if (chartDataMap[dateStr]) {
-        chartDataMap[dateStr].vozvrat += ret.totalRefundAmount || 0;
-      }
-    });
-
     // Formatting chart arrays
     const paymentChartData = [
       { name: 'Naqd', value: paymentBreakdown.naqd, color: '#10b981' },
@@ -381,7 +403,7 @@ exports.getSalesReport = async (req, res) => {
           revenue: totalRevenue, netRevenue, returnAmount: totalReturnAmount,
           profit: totalProfit, debt: totalDebt, soldQty: totalQuantity,
           returnedQty: totalReturnedQty, netQty: netQuantity,
-          orders: orders.length, returnCount: returns.length, avgCheck,
+          orders: ordersLength, returnCount: returnsLength, avgCheck,
           marginPercent: netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0
         },
         paymentChartData, typeChartData, weekTrendData,
@@ -424,17 +446,33 @@ exports.exportSalesExcel = async (req, res) => {
       ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}),
     };
 
-    const [orders, returns] = await Promise.all([
-      Order.find(orderMatch).populate('items.product', 'brand collection artikul').lean(),
-      Return.find(returnMatch).populate('items.product', 'brand collection artikul').lean(),
-    ]);
+    // 🔥 FIX: Excel generatsiyasida ham RAM to'lib qolmasligi uchun Cursor ishlatamiz
+    const orderCursor = Order.find(orderMatch)
+      .populate('items.product', 'brand collection artikul')
+      .lean().cursor();
+
+    const returnCursor = Return.find(returnMatch)
+      .populate('items.product', 'brand collection artikul')
+      .lean().cursor();
 
     // Aggregate product stats
     const productStats = {};
     let totalRevenue = 0, totalQuantity = 0, totalProfit = 0;
+    const ordersList = []; // Excel varag'iga yozish uchun baribir kerak, lekin biz uni streamdan to'plab boramiz. Idealda Excelni ham stream bilan yozish kerak, lekin 10-20k object array Node.js da 50-60MB oladi (Mongoose documentdan ko'ra ming marta yengil).
 
-    orders.forEach((order) => {
+    for await (const order of orderCursor) {
+      ordersList.push(order); // pastki qism (sheet 2) uchun
       totalProfit += order.totalProfit || 0;
+      
+      let calculatedOrderTotal = 0;
+      (order.items || []).forEach(i => {
+        calculatedOrderTotal += (i.unitPrice * i.quantity) * (1 - (i.discount || 0) / 100);
+      });
+      const hasGlobalDiscount = order.overrideTotalAmount !== undefined && order.overrideTotalAmount !== null;
+      const globalDiscountRatio = (hasGlobalDiscount && calculatedOrderTotal > 0) 
+        ? (order.overrideTotalAmount / calculatedOrderTotal) 
+        : 1;
+
       (order.items || []).forEach((item) => {
         if (!item.product?._id) return;
         const pId = item.product._id.toString();
@@ -443,17 +481,20 @@ exports.exportSalesExcel = async (req, res) => {
           productStats[pId] = { name, artikul: item.product.artikul || '-', soldQty: 0, returnedQty: 0, netQty: 0, revenue: 0 };
         }
         productStats[pId].soldQty += item.quantity || 0;
-        const sub = item.subtotal ?? (item.quantity * item.unitPrice) ?? 0;
+        
+        const rawSub = (item.unitPrice * item.quantity) * (1 - (item.discount || 0) / 100);
+        const sub = rawSub * globalDiscountRatio;
+        
         productStats[pId].revenue += sub;
         totalRevenue += sub;
         totalQuantity += item.quantity || 0;
       });
-    });
+    }
 
     let totalReturnAmount = 0;
     let totalLostProfit   = 0;
 
-    returns.forEach((ret) => {
+    for await (const ret of returnCursor) {
       totalReturnAmount += ret.totalRefundAmount || 0;
       totalLostProfit   += (ret.totalRefundAmount || 0) - (ret.totalRefundCost || 0);
 
@@ -465,14 +506,14 @@ exports.exportSalesExcel = async (req, res) => {
           productStats[pId] = { name, artikul: item.product.artikul || '-', soldQty: 0, returnedQty: 0, netQty: 0, revenue: 0 };
         }
         productStats[pId].returnedQty += item.quantity || 0;
-        productStats[pId].revenue = Math.max(0, productStats[pId].revenue - (item.refundAmount || 0));
+        productStats[pId].revenue = productStats[pId].revenue - (item.refundAmount || 0);
       });
-    });
+    }
 
-    totalProfit = Math.max(0, totalProfit - totalLostProfit);
+    totalProfit = totalProfit - totalLostProfit;
 
     const productsArray = Object.values(productStats)
-      .map((p) => ({ ...p, netQty: Math.max(0, p.soldQty - p.returnedQty) }))
+      .map((p) => ({ ...p, netQty: p.soldQty - p.returnedQty }))
       .sort((a, b) => b.revenue - a.revenue);
 
     // ── Build Workbook ─────────────────────────────────────────────────────────
@@ -630,7 +671,7 @@ exports.exportSalesExcel = async (req, res) => {
     const statusMap = { confirmed: 'Tasdiqlangan', delivered: "Yetkazilgan", pending: 'Kutilmoqda', cancelled: 'Bekor' };
     const payMap    = { naqd: 'Naqd', nasiya: 'Nasiya', qisman: 'Qisman' };
 
-    orders
+    ordersList
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .forEach((order, idx) => {
         const oRow = ordersSheet.getRow(idx + 2);

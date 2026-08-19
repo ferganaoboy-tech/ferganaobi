@@ -73,6 +73,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 }));
 
+const compression = require('compression');
+app.use(compression()); // ✅ FIX: Response payloads compressing for speed
+
 // ✅ FIX: JSON body limit — 10mb (rasm base64 uchun yetarli, DoS xavfi kamaytiladi)
 // Ilgari 50mb edi — bu DoS hujumi uchun qulay edi.
 app.use(express.json({ limit: '10mb' }));
@@ -118,13 +121,39 @@ app.use((req, res, next) => {
 const isProduction = process.env.NODE_ENV === 'production';
 mongoose.set('autoIndex', !isProduction);
 
+// ✅ Performance: Slow Query Logger (500ms dan sekin so'rovlarni log qiladi)
+mongoose.set('debug', (collectionName, method, query, doc, options) => {
+  const startTime = Date.now();
+  // Asl callback yo'q, shuning uchun so'rov boshlangan vaqtni tutamiz, 
+  // lekin mongoose o'zi default holatda so'rovlarni konsolga chiqaradi.
+  // Slow query ni haqiqiy intercept qilish uchun mongoose plugin yozamiz (pastda).
+});
+
+// Yaxshiroq Slow Query Logger Plugin:
+mongoose.plugin((schema) => {
+  const methods = ['find', 'findOne', 'findOneAndUpdate', 'insertMany', 'aggregate'];
+  methods.forEach((m) => {
+    schema.pre(m, function (next) {
+      this.startTime = Date.now();
+      next();
+    });
+    schema.post(m, function (res, next) {
+      const duration = Date.now() - this.startTime;
+      if (duration > 500) {
+        console.warn(`🐢 SLOW QUERY [${duration}ms]: ${this.mongooseCollection.name}.${m}`);
+      }
+      next();
+    });
+  });
+});
+
+// ✅ Global Tenant Plugin (Multi-tenancy/IDOR himoyasi uchun)
+mongoose.plugin(require('./utils/mongooseTenantPlugin'));
+
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/wallpaper-crm', {
-    // ✅ FIX: maxPoolSize optimallashtirish
-    // Ilgari 200 — Render free tier (512MB RAM) uchun juda ko'p.
-    // Har bir idle connection ~5MB RAM tutadi: 200 * 5MB = 1GB+!
-    // Production'da MONGO_POOL_SIZE env bilan boshqarish tavsiya etiladi.
-    maxPoolSize: Number(process.env.MONGO_POOL_SIZE) || 20,
+    // ✅ FIX: maxPoolSize optimallashtirish (512MB RAM uchun max 10 ta connection)
+    maxPoolSize: Number(process.env.MONGO_POOL_SIZE) || 10,
   })
   .then(async () => {
     console.log('Connected to MongoDB');

@@ -156,6 +156,15 @@ exports.confirmOrder = async (req, res) => {
       if (!order) {
         throw new Error('Order not found');
       }
+      
+      // ✅ FIX: IDOR Himoyasi — Boshqa filial buyurtmasini o'zgartirish man etiladi
+      if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+        const docWh = order.warehouse?._id?.toString() || order.warehouse?.toString();
+        if (docWh !== req.user.warehouse.toString()) {
+          throw new Error('Siz boshqa filial buyurtmasini tasdiqlay olmaysiz.');
+        }
+      }
+
       if (order.status !== 'pending') {
         throw new Error('Faqat kutilayotgan buyurtmalarni tasdiqlash mumkin');
       }
@@ -256,6 +265,14 @@ exports.cancelOrder = async (req, res) => {
     await session.withTransaction(async () => {
       const order = await Order.findById(req.params.id).session(session);
       if (!order) throw new Error('Order not found');
+      
+      if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+        const docWh = order.warehouse?._id?.toString() || order.warehouse?.toString();
+        if (docWh !== req.user.warehouse.toString()) {
+          throw new Error('Siz boshqa filial buyurtmasini bekor qila olmaysiz.');
+        }
+      }
+
       if (order.status === 'cancelled') throw new Error('Already cancelled');
 
       // ✅ FIX #6: Eski statusni OLDIN saqlaymiz
@@ -345,6 +362,13 @@ exports.updateOrderStatus = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      const docWh = order.warehouse?._id?.toString() || order.warehouse?.toString();
+      if (docWh !== req.user.warehouse.toString()) {
+        return res.status(403).json({ success: false, message: 'Siz boshqa filial buyurtmasini holatini o\'zgartira olmaysiz.' });
+      }
     }
 
     if (['cancelled', 'returned'].includes(status)) {
@@ -615,6 +639,13 @@ exports.sendReceiptImage = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      const docWh = order.warehouse?._id?.toString() || order.warehouse?.toString();
+      if (docWh !== req.user.warehouse.toString()) {
+        return res.status(403).json({ success: false, message: 'Siz boshqa filial buyurtmasi chekini yubora olmaysiz.' });
+      }
     }
 
     if (!imageBase64) {

@@ -35,9 +35,10 @@ const BRAND_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#1
 const fmt = (val) => new Intl.NumberFormat('ru-RU').format(Math.round(val || 0)) + ' UZS';
 const fmtCompact = (val) => {
   const n = val || 0;
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + ' mlrd';
-  if (n >= 1_000_000)     return (n / 1_000_000).toFixed(1) + ' mln';
-  if (n >= 1_000)         return (n / 1_000).toFixed(0) + ' ming';
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + ' mlrd';
+  if (abs >= 1_000_000)     return (n / 1_000_000).toFixed(1) + ' mln';
+  if (abs >= 1_000)         return (n / 1_000).toFixed(0) + ' ming';
   return n.toString();
 };
 
@@ -223,11 +224,11 @@ const ReportsPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={fetchData} disabled={loading} className="h-[40px] px-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-secondary)] text-[13px] font-[600] flex items-center gap-2 hover:bg-[var(--bg-raised)] transition-all">
+            <button onClick={fetchData} disabled={loading} className="h-[40px] px-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] text-[13px] font-[600] flex items-center gap-2 hover:bg-[var(--bg-raised)] transition-all">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Yangilash
             </button>
-            <button onClick={handleExport} disabled={exporting || loading} className="h-[40px] px-5 rounded-xl bg-[var(--accent-primary)] text-white text-[13px] font-[600] flex items-center gap-2 hover:brightness-110 shadow-lg shadow-indigo-500/20 transition-all">
+            <button onClick={handleExport} disabled={exporting || loading} className="h-[40px] px-5 rounded-xl bg-indigo-600 text-white text-[13px] font-[600] flex items-center gap-2 hover:bg-indigo-500 shadow-lg shadow-indigo-500/20 transition-all">
               <FileSpreadsheet className="w-4 h-4" />
               {exporting ? '...' : 'Excel Yuklash'}
             </button>
@@ -242,7 +243,7 @@ const ReportsPage = () => {
             {TABS.map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-[600] whitespace-nowrap transition-all ${
-                  activeTab === t.id ? 'bg-[var(--bg-surface)] text-[var(--accent-primary)] shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  activeTab === t.id ? 'bg-[var(--bg-surface)] text-[var(--accent-primary)] shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-raised)]'
                 }`}>
                 <t.icon className="w-4 h-4" /> {t.label}
               </button>
@@ -254,16 +255,16 @@ const ReportsPage = () => {
             {PRESETS.map(p => (
               <button key={p.value} onClick={() => setPreset(p.value)}
                 className={`shrink-0 px-3 py-1.5 rounded-lg text-[12px] font-[600] transition-all ${
-                  preset === p.value ? 'bg-[var(--text-primary)] text-[var(--bg-surface)]' : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--border-default)]'
+                  preset === p.value ? 'bg-indigo-600 text-white shadow-md' : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--border-default)] hover:text-[var(--text-primary)]'
                 }`}>
                 {p.label}
               </button>
             ))}
             {preset === 'custom' && (
               <div className="flex items-center gap-1 px-2 py-1 bg-[var(--bg-subtle)] rounded-lg">
-                <input type="date" value={dateRange.start} onChange={e => setDateRange(r => ({ ...r, start: e.target.value }))} className="h-6 px-1 text-[12px] bg-transparent outline-none text-[var(--text-primary)]" />
+                <input type="date" value={dateRange.start} onChange={e => setDateRange(r => ({ ...r, start: e.target.value }))} className="h-6 px-1 text-[12px] bg-transparent outline-none text-[var(--text-primary)] [color-scheme:dark]" />
                 <span className="text-[var(--text-tertiary)]">-</span>
-                <input type="date" value={dateRange.end} onChange={e => setDateRange(r => ({ ...r, end: e.target.value }))} className="h-6 px-1 text-[12px] bg-transparent outline-none text-[var(--text-primary)]" />
+                <input type="date" value={dateRange.end} onChange={e => setDateRange(r => ({ ...r, end: e.target.value }))} className="h-6 px-1 text-[12px] bg-transparent outline-none text-[var(--text-primary)] [color-scheme:dark]" />
               </div>
             )}
           </div>
@@ -291,11 +292,11 @@ const ReportsPage = () => {
                   {loading ? <Skeleton className="h-[100px] w-full" /> : (
                     <ResponsiveContainer width="100%" height={120}>
                       <PieChart>
-                        <Pie data={data?.paymentChartData} dataKey="value" innerRadius="50%" outerRadius="80%" paddingAngle={2} label={DonutLabel} labelLine={false}>
+                        <Pie data={data?.paymentChartData} dataKey="value" innerRadius="50%" outerRadius="80%" paddingAngle={2} label={DonutLabel} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
                           {data?.paymentChartData?.map(d => <Cell key={d.name} fill={PAY_COLORS[d.name] || '#888'} />)}
                         </Pie>
-                        <Tooltip formatter={v => fmt(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                        <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                        <Tooltip formatter={v => fmt(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
+                        <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)' }} />
                       </PieChart>
                     </ResponsiveContainer>
                   )}
@@ -305,11 +306,11 @@ const ReportsPage = () => {
                   {loading ? <Skeleton className="h-[100px] w-full" /> : (
                     <ResponsiveContainer width="100%" height={120}>
                       <PieChart>
-                        <Pie data={data?.typeChartData} dataKey="value" innerRadius="50%" outerRadius="80%" paddingAngle={2} label={DonutLabel} labelLine={false}>
+                        <Pie data={data?.typeChartData} dataKey="value" innerRadius="50%" outerRadius="80%" paddingAngle={2} label={DonutLabel} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
                           {data?.typeChartData?.map(d => <Cell key={d.name} fill={TYPE_COLORS[d.name] || '#888'} />)}
                         </Pie>
-                        <Tooltip formatter={v => fmt(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                        <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                        <Tooltip formatter={v => fmt(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
+                        <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)' }} />
                       </PieChart>
                     </ResponsiveContainer>
                   )}
@@ -354,11 +355,11 @@ const ReportsPage = () => {
                   <div className="h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={data?.brands?.slice(0, 8)} dataKey="revenue" nameKey="name" cx="50%" cy="50%" innerRadius="40%" outerRadius="75%" paddingAngle={2} labelLine={false}>
+                        <Pie data={data?.brands?.slice(0, 8)} dataKey="revenue" nameKey="name" cx="50%" cy="50%" innerRadius="40%" outerRadius="75%" paddingAngle={2} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
                           {data?.brands?.slice(0,8).map((b, i) => <Cell key={i} fill={BRAND_COLORS[i % BRAND_COLORS.length]} />)}
                         </Pie>
-                        <Tooltip formatter={v => fmt(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                        <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                        <Tooltip formatter={v => fmt(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
+                        <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)' }} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>

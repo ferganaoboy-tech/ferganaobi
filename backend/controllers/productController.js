@@ -149,7 +149,15 @@ exports.createProduct = async (req, res) => {
       }));
     }
 
-    const productData = { ...req.body, images };
+    const productData = {
+      ...req.body,
+      images,
+      isActive: true
+    };
+
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      productData.warehouse = req.user.warehouse; // Force warehouse assignment
+    }
     
     const product = await Product.create(productData);
     
@@ -165,7 +173,7 @@ exports.createProduct = async (req, res) => {
     // Delete uploaded images if validation fails
     if (req.files) {
       for (const file of req.files) {
-        await cloudinary.uploader.destroy(file.filename);
+        await cloudinary.uploader.destroy(file.public_id || file.filename);
       }
     }
     res.status(400).json({ success: false, message: error.message });
@@ -260,6 +268,13 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      const pWarehouse = product.warehouse._id ? product.warehouse._id.toString() : product.warehouse.toString();
+      if (pWarehouse !== req.user.warehouse.toString()) {
+        return res.status(403).json({ success: false, message: 'Siz boshqa sklad mahsulotini o\'chira olmaysiz.' });
+      }
+    }
+
     // Soft delete qilinayotgani sababli Cloudinary-dagi rasmlarni o'chirmaymiz.
     // Ular o'tgan buyurtmalar (history) ko'rilganda kerak bo'ladi.
     
@@ -278,17 +293,28 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
+const NodeCache = require('node-cache');
+const filterCache = new NodeCache({ stdTTL: 1800 }); // 30 mins
+
 // @desc    Get product filters
 // @route   GET /api/products/filters
 // @access  Public
 exports.getFilters = async (req, res) => {
   try {
+    const cacheKey = 'product_filters_v2';
+    if (filterCache.has(cacheKey)) {
+      return res.status(200).json(filterCache.get(cacheKey));
+    }
+
     const materials = await Product.distinct('material', { isActive: true });
     const designs = await Product.distinct('design', { isActive: true });
     const polkas = await Product.distinct('polka', { isActive: true });
     const brands = await Product.distinct('brand', { isActive: true, brand: { $ne: null, $ne: '' } });
 
-    res.status(200).json({ success: true, data: { materials, designs, polkas, brands } });
+    const result = { success: true, data: { materials, designs, polkas, brands } };
+    filterCache.set(cacheKey, result);
+    
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -505,7 +531,8 @@ exports.getCompareProducts = async (req, res) => {
 
     const products = await Product.find(query)
       .populate('warehouse', 'name color location')
-      .sort({ quantity: -1 });
+      .sort({ quantity: -1 })
+      .lean();
 
     res.status(200).json({ success: true, data: products });
   } catch (error) {

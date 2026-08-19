@@ -98,6 +98,7 @@ exports.getCustomer = async (req, res) => {
     const recentOrders = await Order.find({ customer: customer._id })
       .sort({ createdAt: -1 })
       .limit(10)
+      .lean()
       .populate('warehouse', 'name');
 
     res.status(200).json({ 

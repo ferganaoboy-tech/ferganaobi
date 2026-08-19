@@ -13,6 +13,7 @@
     "@tailwindcss/postcss": "^4.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-query": "^5.101.0",
+    "@tanstack/react-virtual": "^3.14.10",
     "autoprefixer": "^10.5.0",
     "axios": "^1.17.0",
     "browser-image-compression": "^2.0.2",

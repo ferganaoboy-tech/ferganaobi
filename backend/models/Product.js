@@ -65,6 +65,8 @@ productSchema.pre('save', function() {
 productSchema.index({ artikul: 1, brand: 1, warehouse: 1 }, { unique: true, partialFilterExpression: { isActive: true } });
 productSchema.index({ brand: 'text', artikul: 'text', collection: 'text', polka: 'text' });
 productSchema.index({ warehouse: 1, isActive: 1 });
+productSchema.index({ isActive: 1, warehouse: 1, quantity: -1 }); // ✅ FIX: getProducts quantity filter
+productSchema.index({ isActive: 1, warehouse: 1, soldQuantity: -1, createdAt: -1 }); // ✅ FIX: getProducts sortBy popular
 productSchema.index({ material: 1, isActive: 1 });
 productSchema.index({ design: 1, isActive: 1 });
 productSchema.index({ warehouse: 1, isActive: 1, createdAt: -1 });

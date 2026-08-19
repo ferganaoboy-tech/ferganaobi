@@ -24,11 +24,29 @@ exports.createReturn = async (req, res) => {
 
       if (!order) throw new Error('Buyurtma topilmadi');
 
+      if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+        const docWh = order.warehouse?._id?.toString() || order.warehouse?.toString();
+        if (docWh !== req.user.warehouse.toString()) {
+          throw new Error('Siz boshqa filial buyurtmasidan vozvrat qila olmaysiz.');
+        }
+      }
+
       let totalRefundAmount = 0;
       let totalRefundCost = 0;
       const processedItems = [];
 
-      // 2. Qaytariladigan mahsulotlarni tekshirish va hisoblash
+      // ✅ FIX: Global chegirma (overrideTotalAmount) nisbatini hisoblaymiz.
+      // Agar butun buyurtmaga chegirma qilingan bo'lsa, vozvrat summasi ham xuddi shu nisbatda arzonroq qaytishi shart!
+      let calculatedOrderTotal = 0;
+      order.items.forEach(i => {
+        const activeQty = i.quantity; // Olingan vaqtdagi umumiy miqdor
+        calculatedOrderTotal += (i.unitPrice * activeQty) * (1 - (i.discount || 0) / 100);
+      });
+      const hasGlobalDiscount = order.overrideTotalAmount !== undefined && order.overrideTotalAmount !== null;
+      const globalDiscountRatio = (hasGlobalDiscount && calculatedOrderTotal > 0) 
+        ? (order.overrideTotalAmount / calculatedOrderTotal) 
+        : 1;
+
       for (let returnItem of items) {
         const orderItem = order.items.find(
           i => i.product._id.toString() === returnItem.product
@@ -44,13 +62,18 @@ exports.createReturn = async (req, res) => {
           );
         }
 
-        const itemSubtotal =
+        // Asosiy subtotal
+        const rawItemSubtotal =
           (orderItem.unitPrice * returnItem.quantity) *
           (1 - (orderItem.discount || 0) / 100);
-        totalRefundAmount += itemSubtotal;
+          
+        // Global skidkani hisobga olgan holda aniq refund (vozvrat) summasi
+        const itemSubtotal = rawItemSubtotal * globalDiscountRatio;
+        
+        totalRefundAmount = Math.round(totalRefundAmount + itemSubtotal);
 
         const itemCost = (orderItem.unitCost || 0) * returnItem.quantity;
-        totalRefundCost += itemCost;
+        totalRefundCost = Math.round(totalRefundCost + itemCost);
 
         // returnedQuantity yangilaymiz (order saqlanganda hisob-kitob bo'ladi)
         orderItem.returnedQuantity = (orderItem.returnedQuantity || 0) + returnItem.quantity;
@@ -69,7 +92,7 @@ exports.createReturn = async (req, res) => {
           quantityInRolls,
           unitPrice: orderItem.unitPrice,
           discount: orderItem.discount,
-          refundAmount: itemSubtotal,
+          refundAmount: Math.round(itemSubtotal), // Yaxlitlangan aniq refund
           unitCost: orderItem.unitCost || 0,
           unitCostUsd: orderItem.unitCostUsd || 0
         });
@@ -253,8 +276,12 @@ exports.getReturns = async (req, res) => {
 exports.quickReturn = async (req, res) => {
   const session = await mongoose.startSession();
   try {
-    const { items, totalRefundAmount, reason, warehouse } = req.body;
+    let { items, totalRefundAmount, reason, warehouse } = req.body;
     const io = req.app.get('io');
+
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      warehouse = req.user.warehouse; // Boshqa warehouse kiritishini bloklash
+    }
 
     let returnResult;
     let syncDeltas;
@@ -280,7 +307,7 @@ exports.quickReturn = async (req, res) => {
         );
 
         const itemCost = (product.costPrice || 0) * returnItem.quantity;
-        calculatedTotalRefundCost += itemCost;
+        calculatedTotalRefundCost = Math.round(calculatedTotalRefundCost + itemCost);
 
         processedItems.push({
           product: returnItem.product,
