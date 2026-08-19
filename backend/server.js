@@ -54,15 +54,9 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // ✅ FIX: origin yo'q (null/undefined) bo'lgan so'rovlarga ruxsat BERILMAYDI.
-    // Ilgari bu Postman, curl, SSRF hujumlariga yo'l ochardi.
-    // Faqat aniq ro'yxatdagi originlar o'tadi.
+    // ✅ FIX: Telegram Webhook kabi origin'siz API so'rovlarni o'tkazib yuborish
     if (!origin) {
-      // Development'da Postman uchun qulaylik (production'da qattiq)
-      if (process.env.NODE_ENV !== 'production') {
-        return callback(null, true);
-      }
-      return callback(new Error('CORS: Noaniq manba (origin yo\'q) — ruxsat etilmagan'));
+      return callback(null, true);
     }
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -98,10 +92,7 @@ const sanitizeMongoObj = (obj) => {
   } else if (obj && typeof obj === 'object') {
     Object.keys(obj).forEach((key) => {
       if (key.startsWith('$') || key.includes('.')) {
-        const safeKey = key.replace(/^\$|\./g, '_');
-        obj[safeKey] = obj[key];
         delete obj[key];
-        sanitizeMongoObj(obj[safeKey]);
       } else {
         sanitizeMongoObj(obj[key]);
       }
@@ -122,27 +113,20 @@ const isProduction = process.env.NODE_ENV === 'production';
 mongoose.set('autoIndex', !isProduction);
 
 // ✅ Performance: Slow Query Logger (500ms dan sekin so'rovlarni log qiladi)
-mongoose.set('debug', (collectionName, method, query, doc, options) => {
-  const startTime = Date.now();
-  // Asl callback yo'q, shuning uchun so'rov boshlangan vaqtni tutamiz, 
-  // lekin mongoose o'zi default holatda so'rovlarni konsolga chiqaradi.
-  // Slow query ni haqiqiy intercept qilish uchun mongoose plugin yozamiz (pastda).
-});
-
 // Yaxshiroq Slow Query Logger Plugin:
 mongoose.plugin((schema) => {
-  const methods = ['find', 'findOne', 'findOneAndUpdate', 'insertMany', 'aggregate'];
+  const methods = ['find', 'findOne', 'findOneAndUpdate', 'insertMany', 'aggregate', 'countDocuments'];
   methods.forEach((m) => {
-    schema.pre(m, function (next) {
+    schema.pre(m, function () {
       this.startTime = Date.now();
-      next();
     });
-    schema.post(m, function (res, next) {
-      const duration = Date.now() - this.startTime;
-      if (duration > 500) {
-        console.warn(`🐢 SLOW QUERY [${duration}ms]: ${this.mongooseCollection.name}.${m}`);
+    schema.post(m, function (res) {
+      if (this.startTime) {
+        const duration = Date.now() - this.startTime;
+        if (duration > 500) {
+          console.warn(`🐢 SLOW QUERY [${duration}ms]: ${this.mongooseCollection?.name || 'Unknown'}.${m}`);
+        }
       }
-      next();
     });
   });
 });
