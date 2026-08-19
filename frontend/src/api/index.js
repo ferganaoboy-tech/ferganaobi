@@ -2,6 +2,18 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '/api');
 
+// ✅ FIX: Access token endi localStorage'da emas — IN-MEMORY (RAM) da saqlanadi.
+// XSS hujumi bo'lsa attacker localStorage.getItem('crm_token') → "" (bo'sh).
+// Sahifa yangilanganda: refresh token (HttpOnly cookie) → yangi access token.
+// Bu eng xavfsiz pattern: "Token in Memory + Refresh Cookie" arxitekturasi.
+let _accessToken = null;
+
+export const tokenStore = {
+  get: () => _accessToken,
+  set: (token) => { _accessToken = token; },
+  clear: () => { _accessToken = null; },
+};
+
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true, // HttpOnly cookie (refresh token) yuborish uchun
@@ -11,7 +23,7 @@ const api = axios.create({
 // Har bir so'rovga access token'ni qo'shish
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('crm_token');
+    const token = tokenStore.get();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -62,7 +74,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       // /refresh endpoint o'zi 401 qaytarsa — login sahifasiga yo'naltir
       if (originalRequest.url?.includes('/auth/refresh')) {
-        localStorage.removeItem('crm_token');
+        tokenStore.clear();
         localStorage.removeItem('crm_user');
         window.dispatchEvent(new Event('auth:expired'));
         return Promise.reject(error);
@@ -78,6 +90,7 @@ api.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${token}`;
             return api(originalRequest);
           })
+
           .catch((err) => Promise.reject(err));
       }
 
@@ -91,7 +104,8 @@ api.interceptors.response.use(
 
         if (!newToken) throw new Error('No token in refresh response');
 
-        localStorage.setItem('crm_token', newToken);
+        // ✅ FIX: Token in-memory'ga saqlanadi — localStorage emas
+        tokenStore.set(newToken);
 
         // Agar user ma'lumotlari ham yangilangan bo'lsa
         if (refreshRes.data?.data?.user) {
@@ -105,7 +119,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh ham muvaffaqiyatsiz — foydalanuvchini login sahifasiga yo'naltir
         processQueue(refreshError, null);
-        localStorage.removeItem('crm_token');
+        tokenStore.clear();
         localStorage.removeItem('crm_user');
         window.dispatchEvent(new Event('auth:expired'));
         return Promise.reject(refreshError);

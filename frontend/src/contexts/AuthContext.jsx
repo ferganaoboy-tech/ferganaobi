@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { fetchMe, logoutApi } from '../api';
+import { tokenStore } from '../api/index';
 import { socket } from '../socket';
 import { BounceLoader } from 'react-spinners';
 
@@ -12,11 +13,13 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const cachedToken = localStorage.getItem('crm_token');
+  // ✅ FIX: Token endi in-memory (tokenStore) da — localStorage emas.
+  // User ma'lumotlari (ism, rol) localStorage'da qoladi — bu xavfsiz.
+  // Sahifa yangilanganda token yo'q → /api/auth/refresh → yangi token olinadi.
   const cachedUserStr = localStorage.getItem('crm_user');
   
   let initialUser = null;
-  if (cachedToken && cachedUserStr) {
+  if (cachedUserStr) {
     try {
       initialUser = JSON.parse(cachedUserStr);
     } catch (e) {
@@ -25,35 +28,42 @@ export const AuthProvider = ({ children }) => {
   }
 
   const [user, setUser] = useState(initialUser);
-  // Agar keshda yuzer bo'lsa, kutishga hojat yo'q - darhol render qilamiz
-  const [isLoading, setIsLoading] = useState(!initialUser && !!cachedToken);
+  // Sahifa yangilanganda har doim refresh so'rov yuboriladi (token yo'q bo'lgani uchun)
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadUser = async () => {
-      if (!cachedToken) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Agar keshda user bo'lsa darhol socket ni ulaymiz
+      // Agar keshda user bo'lsa darhol socket ni ulaymiz (optimistic)
       if (initialUser) {
         socket.connect();
       }
 
       try {
+        // Sahifa yangilanganda /api/auth/refresh orqali yangi access token olamiz
+        // Bu HttpOnly cookie orqali ishlaydi — CSRF xavfi yo'q (SameSite=none/lax)
+        const { default: api } = await import('../api/index');
+        const refreshRes = await api.post('/auth/refresh');
+        const newToken = refreshRes.data?.data?.token;
+        if (newToken) {
+          tokenStore.set(newToken);
+        }
+
+        // /me endpoint bilan foydalanuvchi ma'lumotlarini yangilash
         const res = await fetchMe();
         if (res.success) {
           setUser(res.data);
           localStorage.setItem('crm_user', JSON.stringify(res.data));
           if (!initialUser) socket.connect();
         } else {
-          localStorage.removeItem('crm_token');
           localStorage.removeItem('crm_user');
+          tokenStore.clear();
           setUser(null);
+          socket.disconnect();
         }
       } catch {
-        localStorage.removeItem('crm_token');
+        // Refresh muvaffaqiyatsiz — foydalanuvchi login sahifasiga ketadi
         localStorage.removeItem('crm_user');
+        tokenStore.clear();
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -61,17 +71,18 @@ export const AuthProvider = ({ children }) => {
     };
 
     loadUser();
-  }, [cachedToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const login = (userData, token) => {
-    localStorage.setItem('crm_token', token);
+    tokenStore.set(token); // ✅ In-memory token
     localStorage.setItem('crm_user', JSON.stringify(userData));
     setUser(userData);
     socket.connect();
   };
 
   /**
-   * logout — access token'ni localStorage'dan, refresh token'ni
+   * logout — access token'ni xotiradan, refresh token'ni
    * server orqali HttpOnly cookie'dan tozalaydi.
    */
   const logout = async () => {
@@ -80,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     } catch {
       // Agar server xatosi bo'lsa ham local state'ni tozalaymiz
     } finally {
-      localStorage.removeItem('crm_token');
+      tokenStore.clear();
       localStorage.removeItem('crm_user');
       setUser(null);
       if (socket.connected) {
