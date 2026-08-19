@@ -44,7 +44,7 @@ const productSchema = new mongoose.Schema({
   warehouse: { type: mongoose.Schema.Types.ObjectId, ref: 'Warehouse', required: true },
   images: [{ url: String, publicId: String }],
   isActive: { type: Boolean, default: true },
-}, { timestamps: true });
+}, { timestamps: true, suppressReservedKeysWarning: true });
 
 // Pre-save hook
 productSchema.pre('save', function() {

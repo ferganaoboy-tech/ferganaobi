@@ -95,6 +95,7 @@ exports.login = async (req, res) => {
 
 // @desc    Auth user with PIN
 // @route   POST /api/auth/login-pin
+// @access  Public
 exports.loginPin = async (req, res) => {
   try {
     const { pin } = req.body;
@@ -103,17 +104,38 @@ exports.loginPin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'PIN kodni kiriting' });
     }
 
-    const user = await User.findOne({ pin }).populate('warehouse');
+    // ✅ FIX: PIN endi DB da bcrypt hash sifatida saqlanadi.
+    // findOne({ pin }) endi ishlamaydi — barcha aktiv foydalanuvchilar
+    // orasidan bcrypt.compare bilan to'g'ri foydalanuvchini topamiz.
+    // Foydalanuvchilar odatda 5-20 nafar — bu effektiv.
+    const users = await User.findOne({ isActive: true, pin: { $exists: true, $ne: null } })
+      .select('+pin')
+      .populate('warehouse');
 
-    if (!user || !user.isActive) {
+    // Bitta so'rov o'rniga: PIN mavjud bo'lgan foydalanuvchilarni olamiz
+    const activeUsersWithPin = await User.find({
+      isActive: true,
+      pin: { $exists: true, $ne: null }
+    }).select('+pin').populate('warehouse');
+
+    let matchedUser = null;
+    for (const u of activeUsersWithPin) {
+      const isMatch = await u.matchPin(pin);
+      if (isMatch) {
+        matchedUser = u;
+        break;
+      }
+    }
+
+    if (!matchedUser) {
       return res.status(401).json({ success: false, message: "PIN kod noto'g'ri yoki xodim bloklangan" });
     }
 
-    const accessToken  = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    const accessToken  = generateAccessToken(matchedUser._id);
+    const refreshToken = generateRefreshToken(matchedUser._id);
 
-    user.refreshToken = refreshToken;
-    await user.save();
+    matchedUser.refreshToken = refreshToken;
+    await matchedUser.save();
 
     setRefreshTokenCookie(res, refreshToken);
 
@@ -121,23 +143,24 @@ exports.loginPin = async (req, res) => {
       success: true,
       data: {
         user: {
-          _id: user._id,
-          name: user.name,
-          username: user.username,
-          role: user.role,
-          permissions: user.permissions,
-          warehouse: user.warehouse,
+          _id: matchedUser._id,
+          name: matchedUser.name,
+          username: matchedUser.username,
+          role: matchedUser.role,
+          permissions: matchedUser.permissions,
+          warehouse: matchedUser.warehouse,
         },
         token: accessToken,
       },
     });
 
-    const reqForLogger = { user, ip: req.ip || req.connection?.remoteAddress };
-    await logAction(reqForLogger, 'LOGIN', 'User', user._id, `${user.name} PIN orqali tizimga kirdi`);
+    const reqForLogger = { user: matchedUser, ip: req.ip || req.connection?.remoteAddress };
+    await logAction(reqForLogger, 'LOGIN', 'User', matchedUser._id, `${matchedUser.name} PIN orqali tizimga kirdi`);
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server xatosi', error: error.message });
   }
 };
+
 
 // @desc    Refresh access token
 // @route   POST /api/auth/refresh

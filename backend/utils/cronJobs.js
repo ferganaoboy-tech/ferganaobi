@@ -3,7 +3,9 @@ const Shift = require('../models/Shift');
 const { logAction } = require('./logger');
 
 const initCronJobs = () => {
-  // Har kuni tunda 03:00 da ishga tushadi
+  // Har kuni tunda 03:00 da (Asia/Tashkent vaqti) ishga tushadi
+  // ✅ FIX: timezone ko'rsatilmagan bo'lsa server UTC da ishlaydi,
+  //         bu esa 03:00 UTC = 08:00 Toshkent demak — noto'g'ri!
   cron.schedule('0 3 * * *', async () => {
     try {
       console.log('🔄 [CRON] Avtomatik smena yopish jarayoni boshlandi...');
@@ -26,11 +28,15 @@ const initCronJobs = () => {
           
           await shift.save();
 
-          await logAction({
-            action: 'Avtomatik smena yopildi',
-            performedBy: shift.user,
-            details: `Smena ID: ${shift._id}`,
-          });
+          // ✅ FIX: logAction to'g'ri imzosi: (req, action, entity, entityId, details)
+          // Cron'da req ob'ekti yo'q — tizim nomidan log yozamiz
+          await logAction(
+            { user: { _id: null, name: 'Tizim (Cron)' }, ip: 'cron' },
+            'SYSTEM',
+            'Shift',
+            shift._id,
+            `Smena avtomatik yopildi (inaktivlik): ${shift._id}, Foydalanuvchi: ${shift.user}`
+          );
         }
         console.log(`✅ [CRON] Muvaffaqiyatli ${openShifts.length} ta ochiq smena yopildi.`);
       } else {
@@ -39,9 +45,13 @@ const initCronJobs = () => {
     } catch (error) {
       console.error('❌ [CRON] Avtomatik smena yopishda xatolik:', error);
     }
+  }, {
+    scheduled: true,
+    timezone: 'Asia/Tashkent' // ✅ FIX: Aniq timezone — UTC emas, Toshkent vaqti
   });
 
-  console.log('⏳ CRON vazifalar ishga tushirildi (Smena avto-yopish: 03:00 da)');
+  console.log("⏳ CRON vazifalar ishga tushirildi (Smena avto-yopish: 03:00 Asia/Tashkent da)");
 };
 
 module.exports = { initCronJobs };
+

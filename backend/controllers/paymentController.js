@@ -6,7 +6,7 @@ const { logAction } = require('../utils/logger');
 
 // @desc    Get all payments
 // @route   GET /api/payments
-// @access  Public
+// @access  Private
 exports.getPayments = async (req, res) => {
   try {
     const { customer, order, method, dateFrom, dateTo, page = 1, limit = 20 } = req.query;
@@ -16,6 +16,14 @@ exports.getPayments = async (req, res) => {
     if (customer) query.customer = typeof customer === 'string' ? customer : undefined;
     if (order) query.order = typeof order === 'string' ? order : undefined;
     if (method && method !== 'Barchasi') query.method = typeof method === 'string' ? method : undefined;
+
+    // ✅ FIX: Warehouse asosida filtrlash — filial xodimi faqat o'z to'lovlarini ko'radi
+    // Ilgari bu filtr yo'q edi — har qanday kassir barcha filial to'lovlarini ko'rardi
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      query.warehouse = req.user.warehouse;
+    } else if (req.query.warehouse) {
+      query.warehouse = typeof req.query.warehouse === 'string' ? req.query.warehouse : undefined;
+    }
 
     if (dateFrom || dateTo) {
       query.createdAt = {};
@@ -52,6 +60,7 @@ exports.getPayments = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // @desc    Create payment
 // @route   POST /api/payments

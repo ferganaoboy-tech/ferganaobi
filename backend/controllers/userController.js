@@ -70,8 +70,13 @@ exports.updateUser = async (req, res) => {
     if (permissions) user.permissions = permissions;
     if (warehouse !== undefined) user.warehouse = warehouse || null;
     if (isActive !== undefined) user.isActive = isActive;
-    if (pin !== undefined) user.pin = pin || null;
-    
+
+    // ✅ PIN yangilash: pre-save hook isModified('pin') ni aniqlay olishi uchun
+    // to'g'ridan-to'g'ri user.pin = ... qilamiz. null bo'lsa — PIN o'chiriladi.
+    if (pin !== undefined) {
+      user.pin = pin || null; // null bo'lsa unset qilinadi
+    }
+
     if (password) {
       user.password = password; // pre-save hook will hash it
     }
@@ -87,6 +92,7 @@ exports.updateUser = async (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+
 
 // @desc    Delete (soft delete) user
 // @route   DELETE /api/users/:id

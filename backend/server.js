@@ -45,15 +45,25 @@ const io = new Server(httpServer, {
 app.set('io', io);
 
 // Middleware
+// ✅ Ruxsat berilgan originlar ro'yxati — faqat shu domainlardan so'rov qabul qilinadi
 const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
+  process.env.CLIENT_URL,
   'http://localhost:5173',
   'http://localhost:3000',
-];
+].filter(Boolean); // Undefined/null qiymatlarni filtrlash
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl)
-    if (!origin) return callback(null, true);
+    // ✅ FIX: origin yo'q (null/undefined) bo'lgan so'rovlarga ruxsat BERILMAYDI.
+    // Ilgari bu Postman, curl, SSRF hujumlariga yo'l ochardi.
+    // Faqat aniq ro'yxatdagi originlar o'tadi.
+    if (!origin) {
+      // Development'da Postman uchun qulaylik (production'da qattiq)
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS: Noaniq manba (origin yo\'q) — ruxsat etilmagan'));
+    }
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
@@ -62,8 +72,12 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// ✅ FIX: JSON body limit — 10mb (rasm base64 uchun yetarli, DoS xavfi kamaytiladi)
+// Ilgari 50mb edi — bu DoS hujumi uchun qulay edi.
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
 app.use(cookieParser()); // Refresh token HttpOnly cookie'sini o'qish uchun
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
@@ -106,7 +120,11 @@ mongoose.set('autoIndex', !isProduction);
 
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/wallpaper-crm', {
-    maxPoolSize: 200
+    // ✅ FIX: maxPoolSize optimallashtirish
+    // Ilgari 200 — Render free tier (512MB RAM) uchun juda ko'p.
+    // Har bir idle connection ~5MB RAM tutadi: 200 * 5MB = 1GB+!
+    // Production'da MONGO_POOL_SIZE env bilan boshqarish tavsiya etiladi.
+    maxPoolSize: Number(process.env.MONGO_POOL_SIZE) || 20,
   })
   .then(async () => {
     console.log('Connected to MongoDB');
@@ -331,13 +349,24 @@ app.use('/api/system', systemRoutes);
 // ─── Telegram Webhook Route ──────────────────────────────────────────────────
 app.post('/api/telegram-webhook', async (req, res) => {
   try {
-    // ✅ FIX: Telegram webhook secret token autentifikatsiyasi
-    // Production'da TELEGRAM_WEBHOOK_SECRET .env da o'rnatilishi kerak
+    // ✅ FIX: Telegram webhook secret token — MAJBURIY tekshiruv.
+    // TELEGRAM_WEBHOOK_SECRET o'rnatilmagan bo'lsa webhook butunlay rad etiladi.
+    // Bu har kim botni boshqarishini oldini oladi.
+    // Secret yaratish: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
     const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
-    if (webhookSecret) {
+
+    if (!webhookSecret) {
+      // Secret yo'q — production'da bu qabul qilinmaydi
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[Telegram Webhook] ❌ TELEGRAM_WEBHOOK_SECRET o\'rnatilmagan! Webhook rad etildi.');
+        return res.sendStatus(403);
+      }
+      // Development'da ogohlantirish bilan davom etamiz
+      console.warn('[Telegram Webhook] ⚠️ TELEGRAM_WEBHOOK_SECRET yo\'q (development mode)');
+    } else {
       const receivedSecret = req.headers['x-telegram-bot-api-secret-token'];
       if (receivedSecret !== webhookSecret) {
-        console.warn(`[Telegram Webhook] Noto'g'ri secret token: ${req.ip}`);
+        console.warn(`[Telegram Webhook] ❌ Noto'g'ri secret token, IP: ${req.ip}`);
         return res.sendStatus(401);
       }
     }
