@@ -398,7 +398,7 @@ exports.getSalesReport = async (req, res) => {
       data: {
         kpi: {
           revenue: totalRevenue, netRevenue, returnAmount: totalReturnAmount,
-          profit: totalProfit, debt: totalDebt, soldQty: totalQuantity,
+          profit: totalProfit, debt: totalDebt, naqd: totalNaqdPaid, soldQty: totalQuantity,
           returnedQty: totalReturnedQty, netQty: netQuantity,
           orders: ordersLength, returnCount: returnsLength, avgCheck,
           marginPercent: netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0

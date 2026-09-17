@@ -3,7 +3,8 @@ import {
   FileSpreadsheet, RefreshCw, ChevronLeft, ChevronRight,
   TrendingUp, TrendingDown, ShoppingCart, Package,
   RotateCcw, CreditCard, BarChart3, Search, ArrowUpDown,
-  CalendarRange, Wallet, Activity, AlertCircle, Users, Tag, CalendarDays
+  CalendarRange, Wallet, Activity, AlertCircle, Users, Tag, CalendarDays,
+  Banknote, Receipt
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -290,19 +291,21 @@ const ReportsPage = () => {
         {activeTab === 'main' && (
           <div className="space-y-6 animate-fade-in">
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <KpiCard icon={Wallet} label="Sof Tushum" color="green" loading={loading} value={formatPrice(kpi.netRevenue)} sub={`Umumiy: ${formatShortPrice(kpi.revenue)}`} />
-              <KpiCard icon={TrendingUp} label="Sof Foyda" color="indigo" loading={loading} value={formatPrice(kpi.profit)} sub={`Marja: ${kpi.marginPercent?.toFixed(1)}%`} />
-              <KpiCard icon={RotateCcw} label="Vozvrat Summasi" color="red" loading={loading} value={formatPrice(kpi.returnAmount)} sub={`${kpi.returnCount} ta operatsiya`} />
-              <KpiCard icon={AlertCircle} label="Nasiya / Qarz" color="amber" loading={loading} value={formatPrice(kpi.debt)} sub="Tasdiqlangan buyurtmalardan" />
-              
-              <KpiCard icon={Package} label="Sotilgan Hajm" loading={loading} value={`${(kpi.netQty || 0).toLocaleString('ru')} dona`} sub={`Brak qaytgan: ${kpi.returnedQty || 0}`} />
-              <KpiCard icon={ShoppingCart} label="Buyurtmalar" loading={loading} value={kpi.orders || 0} sub={`O'rtacha chek: ${formatShortPrice(kpi.avgCheck)}`} />
-              
-              {/* Payment Pie & Type Pie inline as cards */}
-              <div className="col-span-2 grid grid-cols-2 gap-4">
-                <div className="bg-[var(--bg-surface)] rounded-2xl p-4 border border-[var(--border-subtle)] shadow-sm flex flex-col items-center justify-center">
-                  <h4 className="text-[11px] font-[700] text-[var(--text-tertiary)] uppercase w-full text-left mb-2">To'lov Usullari</h4>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard icon={Wallet} label="Sof Tushum" color="green" loading={loading} value={formatPrice(kpi.netRevenue)} sub={`Umumiy: ${formatShortPrice(kpi.revenue)}`} />
+                <KpiCard icon={Banknote} label="Naqd (Kassa)" color="green" loading={loading} value={formatPrice(kpi.naqd)} sub="Sof naqd va o'tkazmalar" />
+                <KpiCard icon={AlertCircle} label="Nasiya / Qarz" color="amber" loading={loading} value={formatPrice(kpi.debt)} sub="Tasdiqlangan buyurtmalardan" />
+                <KpiCard icon={TrendingUp} label="Sof Foyda" color="indigo" loading={loading} value={formatPrice(kpi.profit)} sub={`Marja: ${kpi.marginPercent?.toFixed(1)}%`} />
+                
+                <KpiCard icon={RotateCcw} label="Vozvrat Summasi" color="red" loading={loading} value={formatPrice(kpi.returnAmount)} sub={`${kpi.returnCount} ta operatsiya`} />
+                <KpiCard icon={Package} label="Sotilgan Hajm" loading={loading} value={`${(kpi.netQty || 0).toLocaleString('ru')} dona`} sub={`Brak qaytgan: ${kpi.returnedQty || 0}`} />
+                <KpiCard icon={ShoppingCart} label="Buyurtmalar" loading={loading} value={kpi.orders || 0} sub="Jami muvaffaqiyatli" />
+                <KpiCard icon={Receipt} label="O'rtacha Chek" loading={loading} value={formatPrice(kpi.avgCheck)} sub="Bir buyurtma uchun" />
+                
+                {/* Payment Pie & Type Pie inline as cards */}
+                <div className="col-span-full grid grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+                  <div className="lg:col-start-2 bg-[var(--bg-surface)] rounded-2xl p-4 border border-[var(--border-subtle)] shadow-sm flex flex-col items-center justify-center">
+                    <h4 className="text-[11px] font-[700] text-[var(--text-tertiary)] uppercase w-full text-left mb-2">To'lov Usullari</h4>
                   {loading ? <Skeleton className="h-[100px] w-full" /> : (
                     <ResponsiveContainer width="100%" height={120}>
                       <PieChart>
