@@ -106,8 +106,11 @@ exports.processOrder = async (orderDataInput, user, io) => {
   const amountEligibleForCashback = finalTotal - cashbackUsed;
   
   let cashbackEarned = 0;
-  if (!customerDoc.name.toLowerCase().includes('bir martalik') && customerDoc.cashbackPercent > 0) {
-    cashbackEarned = Math.round(amountEligibleForCashback * (customerDoc.cashbackPercent / 100));
+  // Faqatgina 100% to'lov qilinganda (naqd) keshbek yoziladi
+  if (orderData.paymentType === 'naqd') {
+    if (!customerDoc.name.toLowerCase().includes('bir martalik') && customerDoc.cashbackPercent > 0) {
+      cashbackEarned = Math.round(amountEligibleForCashback * (customerDoc.cashbackPercent / 100));
+    }
   }
 
   // ─── MongoDB Transaction ────────────────────────────────────────────────────

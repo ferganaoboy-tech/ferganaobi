@@ -294,6 +294,7 @@ const CustomersPage = () => {
 
 // Sub-component for Side Panel content
 const CustomerSidePanel = ({ customer, onClose, onEdit, onDelete, onPayment, tab, setTab }) => {
+  const { formatPrice } = useCurrency();
   const { data: ordersRes, isLoading: ordersLoading } = useOrders({ customer: customer._id });
   const { data: paymentsRes, isLoading: paymentsLoading } = usePayments({ customer: customer._id });
 
