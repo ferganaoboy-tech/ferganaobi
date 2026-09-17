@@ -179,7 +179,7 @@ exports.getSalesReport = async (req, res) => {
     let returnsLength = 0;
     
     // Breakdowns
-    const paymentBreakdown = { naqd: 0, nasiya: 0, qisman: 0 };
+    let totalNaqdPaid = 0; // Actual cash/card collected
     const typeBreakdown    = { retail: 0, wholesale: 0 };
     const dayOfWeekStats   = [0,0,0,0,0,0,0]; // Sun-Sat
 
@@ -196,6 +196,7 @@ exports.getSalesReport = async (req, res) => {
       totalRevenue += amount;
       totalProfit  += profit;
       totalDebt    += order.debtAmount || 0;
+      totalNaqdPaid += order.paidAmount || 0;
 
       // Chart data
       const dateStr = getLocalYYYYMMDD(order.createdAt);
@@ -204,10 +205,7 @@ exports.getSalesReport = async (req, res) => {
         chartDataMap[dateStr].foyda += profit;
       }
 
-      // Payment & Type
-      const pt = order.paymentType || 'naqd';
-      if (paymentBreakdown[pt] !== undefined) paymentBreakdown[pt] += amount;
-      
+      // Type Breakdown
       const ct = order.type || (order.customer?.type) || 'retail';
       if (typeBreakdown[ct] !== undefined) typeBreakdown[ct] += amount;
 
@@ -378,12 +376,11 @@ exports.getSalesReport = async (req, res) => {
       .filter(b => b.revenue > 0)
       .sort((a, b) => b.revenue - a.revenue);
 
-    // Formatting chart arrays
-    const paymentChartData = [
-      { name: 'Naqd', value: paymentBreakdown.naqd, color: '#10b981' },
-      { name: 'Nasiya', value: paymentBreakdown.nasiya, color: '#f59e0b' },
-      { name: 'Qisman', value: paymentBreakdown.qisman, color: '#6366f1' },
-    ].filter(p => p.value > 0);
+      // Formatting chart arrays
+      const paymentChartData = [
+        { name: 'Naqd', value: totalNaqdPaid, color: '#10b981' },
+        { name: 'Nasiya', value: totalDebt, color: '#f59e0b' },
+      ].filter(p => p.value > 0);
 
     const typeChartData = [
       { name: 'Ulgurji', value: typeBreakdown.retail, color: '#ec4899' },
