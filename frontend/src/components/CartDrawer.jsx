@@ -34,7 +34,7 @@ const CartDrawer = () => {
   const { data: settingsRes } = useSettings();
   const createOrderMutation = useCreateOrder();
   const createCustomerMutation = useCreateCustomer();
-  const { formatPrice, symbol } = useCurrency();
+  const { formatPrice, symbol, isUsd, inputSymbol } = useCurrency();
 
   const customers = custRes?.data || [];
   const warehouses = whRes?.data || [];
@@ -123,8 +123,17 @@ const CartDrawer = () => {
     });
   };
 
-  const finalTotal = customTotal !== '' ? Number(customTotal) : totalAmount;
-  const debtAmount = finalTotal - (checkoutData.paymentType === 'naqd' ? finalTotal : Number(checkoutData.paidAmount || 0));
+  const finalTotal = customTotal !== '' 
+    ? (isUsd ? Math.round(Number(customTotal) * usdRate) : Number(customTotal)) 
+    : totalAmount;
+  
+  // To'langan summa ham UZSda saqlanishi kerak
+  const parsePaidAmount = (paidStr) => {
+    const raw = Number(paidStr || 0);
+    return isUsd ? Math.round(raw * usdRate) : raw;
+  };
+  
+  const debtAmount = finalTotal - (checkoutData.paymentType === 'naqd' ? finalTotal : parsePaidAmount(checkoutData.paidAmount));
 
   const submitOrder = (customerId) => {
     const orderItems = cartItems.map(item => ({
@@ -141,8 +150,8 @@ const CartDrawer = () => {
       type: orderType,
       items: orderItems,
       paymentType: checkoutData.paymentType,
-      paidAmount: checkoutData.paymentType === 'naqd' ? finalTotal : (checkoutData.paymentType === 'nasiya' ? 0 : Number(checkoutData.paidAmount)),
-      overrideTotalAmount: customTotal !== '' ? Number(customTotal) : undefined,
+      paidAmount: checkoutData.paymentType === 'naqd' ? finalTotal : (checkoutData.paymentType === 'nasiya' ? 0 : parsePaidAmount(checkoutData.paidAmount)),
+      overrideTotalAmount: customTotal !== '' ? finalTotal : undefined,
       deliveryAddress: checkoutData.deliveryAddress,
       deliveryDate: checkoutData.deliveryDate,
       notes: checkoutData.notes,
@@ -313,12 +322,15 @@ const CartDrawer = () => {
                         <div className="mt-2 flex items-baseline gap-1">
                           <input
                             type="number"
-                            value={item.unitPrice}
-                            onChange={(e) => updateCartItemPrice(item.product, item.unit, e.target.value)}
+                            value={isUsd ? (item.unitPrice / usdRate).toFixed(2) : item.unitPrice}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              updateCartItemPrice(item.product, item.unit, isUsd ? Math.round(val * usdRate) : val);
+                            }}
                             className="text-[15px] font-[700] text-primary tracking-tight bg-transparent border-b border-dashed border-subtle outline-none w-[90px] px-0.5 focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             placeholder="0"
                           />
-                          <span className="text-[10px] font-[500] text-gray-500">UZS</span>
+                          <span className="text-[10px] font-[500] text-gray-500">{inputSymbol}</span>
                           <span className="text-[11px] font-[500] text-gray-400 ml-1">/ {item.unit}</span>
                         </div>
                       </div>
@@ -588,18 +600,20 @@ const CartDrawer = () => {
                   <div className="relative flex items-center shadow-sm">
                     <input
                       type="text"
-                      inputMode="numeric"
-                      value={customTotal !== '' ? Number(customTotal).toLocaleString('ru-RU') : totalAmount.toLocaleString('ru-RU')}
+                      inputMode={isUsd ? "decimal" : "numeric"}
+                      value={customTotal !== '' 
+                        ? (isUsd ? customTotal : Number(customTotal).toLocaleString('ru-RU'))
+                        : (isUsd ? (totalAmount / usdRate).toFixed(2) : totalAmount.toLocaleString('ru-RU'))}
                       onChange={(e) => {
-                        const raw = e.target.value.replace(/\D/g, '');
+                        const raw = isUsd ? e.target.value.replace(/[^\d.]/g, '') : e.target.value.replace(/\D/g, '');
                         setCustomTotal(raw);
                       }}
                       className="w-[190px] h-10 pl-3 pr-14 bg-surface border border-subtle focus:border-primary focus:ring-0 rounded-md text-[19px] font-[700] text-primary outline-none transition-all shadow-sm font-mono tracking-tight"
                     />
-                    <span className="absolute right-3 text-[11px] font-[600] text-gray-500 uppercase tracking-widest pointer-events-none">UZS</span>
+                    <span className="absolute right-3 text-[11px] font-[600] text-gray-500 uppercase tracking-widest pointer-events-none">{inputSymbol || 'UZS'}</span>
                   </div>
                   
-                  {usdRate > 0 && (
+                  {usdRate > 0 && !isUsd && (
                     <div className="flex items-center gap-1.5 text-[13px] font-[600] text-slate-600 dark:text-slate-300 bg-slate-100/80 dark:bg-slate-800/60 px-2.5 py-1 rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.02)] border border-slate-200/80 dark:border-slate-700/80 whitespace-nowrap transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 dark:text-slate-500"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
                       {((customTotal !== '' ? Number(customTotal) : totalAmount) / usdRate).toFixed(2)} USD
@@ -621,7 +635,7 @@ const CartDrawer = () => {
                 <div className="flex flex-col items-end">
                   <span className="text-[11px] font-[600] text-state-danger-text uppercase tracking-[0.05em] mb-1">Qarzga:</span>
                   <span className="text-14 font-mono font-[600] text-state-danger-text bg-state-danger-bg border border-state-danger-border px-2.5 py-1 rounded-lg shadow-sm">
-                    {formatUZS(debtAmount).replace(" so'm", "")} <span className="text-[10px] text-state-danger-text/70 uppercase tracking-wide">so'm</span>
+                    {formatPrice(debtAmount).replace(" so'm", "")} <span className="text-[10px] text-state-danger-text/70 uppercase tracking-wide">{inputSymbol || "so'm"}</span>
                   </span>
                 </div>
               )}
