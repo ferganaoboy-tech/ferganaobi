@@ -1,6 +1,27 @@
 export const formatUZS = (amount) =>
   new Intl.NumberFormat('uz-UZ').format(Math.round(amount || 0)) + " so'm"
 
+export const formatUSD = (amount) =>
+  '$ ' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount || 0)
+
+/**
+ * formatPrice — valyuta rejimine qarab summani to'g'ri formatlaydi.
+ * @param {number} amountUzs  — So'mdagi summa (DB da har doim so'mda saqlanadi)
+ * @param {string} mode       — 'uzs' | 'usd' | 'hybrid'
+ * @param {number} rate       — 1 USD = ? so'm
+ */
+export const formatPrice = (amountUzs, mode = 'uzs', rate = 12500) => {
+  if (amountUzs == null) return mode === 'usd' ? '$ 0.00' : "0 so'm";
+  if (mode === 'usd') {
+    return formatUSD((amountUzs || 0) / rate);
+  }
+  if (mode === 'hybrid') {
+    return formatUZS(amountUzs) + ' / ' + formatUSD((amountUzs || 0) / rate);
+  }
+  // default 'uzs'
+  return formatUZS(amountUzs);
+};
+
 export const formatShort = (amount) => {
   if (amount == null) return "0"
   if (amount >= 1_000_000_000) return (amount / 1_000_000_000).toFixed(1) + " mlrd"

@@ -5,12 +5,14 @@ import {
 import { useOrders, useConfirmOrder, useCancelOrder, useDeliverOrder } from '../hooks/useOrders';
 import { formatUZS, formatDateTime } from '../utils/format';
 import { useCart } from '../contexts/CartContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 import CustomSelect from '../components/CustomSelect';
 import CheckViewModal from '../components/CheckViewModal';
 import ReturnModal from '../components/ReturnModal';
 
 const OrdersPage = () => {
   const { setCartOpen } = useCart();
+  const { formatPrice, formatShortPrice } = useCurrency();
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [checkOrder, setCheckOrder] = useState(null);
   const [returnOrder, setReturnOrder] = useState(null);
@@ -222,10 +224,10 @@ const OrdersPage = () => {
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="inline-block bg-subtle/50 px-2 py-1 rounded-md text-[13px] font-[600] text-secondary capitalize">{order.paymentType}</div>
-                          {order.debtAmount > 0 && <div className="text-[11px] font-[600] text-red-500 mt-1">Qarz: {formatUZS(order.debtAmount)}</div>}
+                          {order.debtAmount > 0 && <div className="text-[11px] font-[600] text-red-500 mt-1">Qarz: {formatPrice(order.debtAmount)}</div>}
                         </td>
                         <td className="px-5 py-4 text-right">
-                          <span className="font-mono text-[15px] font-[800] text-primary">{formatUZS(order.totalAmount)}</span>
+                          <span className="font-mono text-[15px] font-[800] text-primary">{formatPrice(order.totalAmount)}</span>
                         </td>
                         <td className="px-5 py-4 text-right flex items-center justify-end">
                           {getStatusBadge(order.status)}
@@ -274,8 +276,8 @@ const OrdersPage = () => {
                                             </div>
                                           )}
                                         </td>
-                                        <td className="px-4 py-3 text-right font-mono text-[13px] text-secondary">{formatUZS(item.unitPrice)}</td>
-                                        <td className="px-4 py-3 text-right font-mono font-[700] text-primary">{formatUZS(item.subtotal)}</td>
+                                        <td className="px-4 py-3 text-right font-mono text-[13px] text-secondary">{formatPrice(item.unitPrice)}</td>
+                                        <td className="px-4 py-3 text-right font-mono font-[700] text-primary">{formatPrice(item.subtotal)}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -358,10 +360,10 @@ const OrdersPage = () => {
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1.5 mb-1.5">
                           <span className="px-2 py-0.5 bg-app border border-subtle rounded text-[11px] font-[600] text-secondary capitalize">{order.paymentType}</span>
-                          {order.debtAmount > 0 && <span className="px-2 py-0.5 text-[11px] font-[600] text-red-600 bg-red-50 border border-red-100 rounded">Qarz: {formatUZS(order.debtAmount).replace(" so'm", "")}</span>}
+                          {order.debtAmount > 0 && <span className="px-2 py-0.5 text-[11px] font-[600] text-red-600 bg-red-50 border border-red-100 rounded">Qarz: {formatPrice(order.debtAmount).replace(" so'm", "")}</span>}
                         </div>
                         <div className="flex items-baseline gap-1">
-                          <span className="text-[18px] font-[800] text-primary tracking-tight leading-none">{formatUZS(order.totalAmount).replace(" so'm", "")}</span>
+                          <span className="text-[18px] font-[800] text-primary tracking-tight leading-none">{formatPrice(order.totalAmount).replace(" so'm", "")}</span>
                           <span className="text-[12px] font-[600] text-tertiary">UZS</span>
                         </div>
                       </div>
@@ -393,8 +395,8 @@ const OrdersPage = () => {
                             <div className="flex flex-col flex-1 min-w-0 justify-center">
                               <span className="text-[13px] sm:text-[14px] font-[700] text-primary truncate">{item.product?.name || item.product?.artikul}</span>
                               <div className="flex justify-between items-center mt-1 sm:mt-1.5">
-                                <span className="text-[12px] font-[600] text-secondary">{item.quantity} {item.unit} <span className="text-tertiary font-normal ml-1">× {formatUZS(item.unitPrice)}</span></span>
-                                <span className="text-[13px] sm:text-[14px] font-[800] font-mono text-primary">{formatUZS(item.subtotal)}</span>
+                                <span className="text-[12px] font-[600] text-secondary">{item.quantity} {item.unit} <span className="text-tertiary font-normal ml-1">× {formatPrice(item.unitPrice)}</span></span>
+                                <span className="text-[13px] sm:text-[14px] font-[800] font-mono text-primary">{formatPrice(item.subtotal)}</span>
                               </div>
                               {item.returnedQuantity > 0 && (
                                 <div className="mt-1.5">

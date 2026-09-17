@@ -24,6 +24,7 @@ import { useDashboardStats } from '../hooks/useProducts';
 import { useOrders, useOrderStats } from '../hooks/useOrders';
 import { useDebtors } from '../hooks/useCustomers';
 import { formatUZS, formatShort, formatQuantity } from '../utils/format';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ const Dashboard = () => {
   const { data: ordersRes, isLoading: ordersLoading } = useOrders({ limit: 5 });
   const { data: orderStatsRes, isLoading: orderStatsLoading } = useOrderStats();
   const { data: debtorsRes, isLoading: debtorsLoading } = useDebtors();
+  const { formatPrice, formatShortPrice } = useCurrency();
 
   const [period, setPeriod] = useState('30 kun');
   const [showFinancials, setShowFinancials] = useState(false);
@@ -68,7 +70,7 @@ const Dashboard = () => {
       return (
         <div className="bg-surface border border-default p-3 rounded-md shadow-none">
           <p className="text-12 text-tertiary mb-1">Kun {label}</p>
-          <p className="text-13 font-[600] text-primary">{formatUZS(payload[0].value)}</p>
+          <p className="text-13 font-[600] text-primary">{formatPrice(payload[0].value)}</p>
         </div>
       );
     }
@@ -108,12 +110,12 @@ const Dashboard = () => {
       <div id="tour-stats" className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <StatsCard 
           title="Umumiy savdo" 
-          value={showFinancials ? formatShort(orderStats?.totalRevenue || 0) : '***'} 
+          value={showFinancials ? formatShortPrice(orderStats?.totalRevenue || 0) : '***'} 
           icon={Banknote} 
         />
         <StatsCard 
           title="Sof foyda" 
-          value={showFinancials ? formatShort(orderStats?.totalProfit || 0) : '***'} 
+          value={showFinancials ? formatShortPrice(orderStats?.totalProfit || 0) : '***'} 
           icon={TrendingUp} 
         />
         <StatsCard 
@@ -128,12 +130,12 @@ const Dashboard = () => {
         />
         <StatsCard 
           title="Inventar qiymati" 
-          value={showFinancials ? formatShort(stats?.totalValue || 0) : '***'} 
+          value={showFinancials ? formatShortPrice(stats?.totalValue || 0) : '***'} 
           icon={Tag} 
         />
         <StatsCard 
           title="Jami qarz" 
-          value={showFinancials ? formatShort(totalDebt) : '***'} 
+          value={showFinancials ? formatShortPrice(totalDebt) : '***'} 
           icon={Scale}
           isDanger={totalDebt > 0}
         />
@@ -183,7 +185,7 @@ const Dashboard = () => {
                   <div className="flex flex-col gap-2.5">
                     <div className="flex justify-between items-center border-b border-subtle pb-2.5">
                       <span className="text-12 font-[500] text-secondary">Umumiy savdo:</span>
-                      <span className="text-13 font-[700] text-primary">{showFinancials ? formatUZS(ws.revenue) : '***'}</span>
+                      <span className="text-13 font-[700] text-primary">{showFinancials ? formatPrice(ws.revenue) : '***'}</span>
                     </div>
                     <div className="flex justify-between items-center border-b border-subtle pb-2.5">
                       <span className="text-12 font-[500] text-secondary">Jami Zaxira:</span>
@@ -195,7 +197,7 @@ const Dashboard = () => {
                     </div>
                     <div className="flex justify-between items-center border-b border-subtle pb-2.5">
                       <span className="text-12 font-[500] text-secondary">Inventar qiymati:</span>
-                      <span className="text-13 font-[600] text-primary">{showFinancials ? formatUZS(ws.totalValue) : '***'}</span>
+                      <span className="text-13 font-[600] text-primary">{showFinancials ? formatPrice(ws.totalValue) : '***'}</span>
                     </div>
                     <div className="flex justify-between items-center border-b border-subtle pt-0.5 pb-2.5">
                       <span className="text-12 font-[500] text-secondary" title="Jami yuborilgan tovarlar tarixi">Jami yuborilgan:</span>
@@ -284,7 +286,7 @@ const Dashboard = () => {
                       <div className="text-12 font-mono text-tertiary mt-0.5">{order.orderNumber}</div>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
-                      <div className="text-14 font-[700] text-primary">{showFinancials ? formatUZS(order.totalAmount) : '***'}</div>
+                      <div className="text-14 font-[700] text-primary">{showFinancials ? formatPrice(order.totalAmount) : '***'}</div>
                       <div className="mt-1.5 flex items-center gap-1 text-11 text-secondary font-[500] bg-surface px-1.5 py-0.5 rounded border border-subtle">
                         {getStatusIcon(order.status)}
                         <span className="uppercase tracking-wider text-[10px]">{order.status}</span>

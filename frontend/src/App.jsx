@@ -154,6 +154,8 @@ const AuthenticatedLayout = ({ children }) => {
 };
 
 import { TransferProvider } from './contexts/TransferContext';
+import { CurrencyProvider } from './contexts/CurrencyContext';
+
 
 const AuthEventHandler = () => {
   const navigate = useNavigate();
@@ -171,6 +173,7 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
+        <CurrencyProvider>
         <TransferProvider>
           {/* Global audio element for reliable playback */}
           <audio id="notification-sound" src="/sound.mp3" preload="auto" style={{ display: 'none' }}></audio>
@@ -353,9 +356,11 @@ function App() {
           <PushNotificationBanner />
         </Router>
         </TransferProvider>
+        </CurrencyProvider>
       </CartProvider>
     </AuthProvider>
   );
+
 }
 
 export default App;

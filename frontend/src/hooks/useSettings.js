@@ -23,7 +23,6 @@ export const useUpdateSettings = () => {
 
 /**
  * useShiftEnabled — smena tizimi yoqilganmi yoki yo'qligini qaytaradi.
- * 
  * Settings'dan features.shiftEnabled flag'ini o'qiydi.
  * Default: false — smena tizimi o'chirilgan.
  */
@@ -31,4 +30,16 @@ export const useShiftEnabled = () => {
   const { data, isLoading } = useSettings();
   const shiftEnabled = data?.data?.features?.shiftEnabled ?? false;
   return { shiftEnabled, isLoading };
+};
+
+/**
+ * useCurrencyMode — joriy valyuta rejimi va USD kursini qaytaradi.
+ * currencyMode: 'uzs' | 'usd' | 'hybrid'
+ * usdRate: number
+ */
+export const useCurrencyMode = () => {
+  const { data, isLoading } = useSettings();
+  const currencyMode = data?.data?.currencyMode ?? 'uzs';
+  const usdRate = data?.data?.usdExchangeRate ?? 12500;
+  return { currencyMode, usdRate, isLoading };
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { Eye, ShoppingBag, Package, Pencil, Trash2, Send, Grid3X3, MoreHorizontal, Minus, Plus, Scale } from 'lucide-react';
 import { FaFire, FaSnowflake } from 'react-icons/fa6';
 import { formatUZS, formatQuantity } from '../../../utils/format';
+import { useCurrency } from '../../../contexts/CurrencyContext';
 import { haptics } from '../../../utils/haptics';
 import toast from 'react-hot-toast';
 
@@ -120,7 +121,7 @@ const ProductTableMobileRow = React.forwardRef(({
           {/* Right: Price & Stock */}
           <div className="flex flex-col items-end shrink-0">
             <div className="flex items-baseline gap-1 mb-1.5">
-              <span className="text-[16px] font-[700] text-primary leading-none">{formatUZS(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")}</span>
+              <span className="text-[16px] font-[700] text-primary leading-none">{formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")}</span>
               <span className="text-[10px] font-[600] text-gray-500">UZS</span>
             </div>
             <div className={`text-[14px] font-[700] leading-none ${product.quantity <= product.minStock ? 'text-red-600' : 'text-emerald-600'}`}>

@@ -7,6 +7,7 @@ import { useWarehouses } from '../hooks/useWarehouses';
 import { useCreateOrder } from '../hooks/useOrders';
 import { useSettings } from '../hooks/useSettings';
 import { formatUZS } from '../utils/format';
+import { useCurrency } from '../contexts/CurrencyContext';
 import toast from 'react-hot-toast';
 import { haptics } from '../utils/haptics';
 import ConfirmModal from './ConfirmModal';
@@ -33,6 +34,7 @@ const CartDrawer = () => {
   const { data: settingsRes } = useSettings();
   const createOrderMutation = useCreateOrder();
   const createCustomerMutation = useCreateCustomer();
+  const { formatPrice, symbol } = useCurrency();
 
   const customers = custRes?.data || [];
   const warehouses = whRes?.data || [];

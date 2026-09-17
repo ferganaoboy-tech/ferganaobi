@@ -6,6 +6,15 @@ const settingsSchema = new mongoose.Schema({
     required: true,
     default: 12500
   },
+  // ─── Valyuta Rejimi ────────────────────────────────────────────────────────
+  // 'uzs'    = Faqat so'mda savdo (default)
+  // 'usd'    = Faqat dollarda savdo (UI da dollar, DB da so'm saqlanadi)
+  // 'hybrid' = Gibrid (so'm + dollar parallel, hozirgi tizim kabi)
+  currencyMode: {
+    type: String,
+    enum: ['uzs', 'usd', 'hybrid'],
+    default: 'uzs'
+  },
   cartFields: {
     showCustomer: { type: Boolean, default: true },
     showAddress:  { type: Boolean, default: true },

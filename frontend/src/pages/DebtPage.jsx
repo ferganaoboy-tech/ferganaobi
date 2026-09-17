@@ -4,12 +4,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDebtors } from '../hooks/useCustomers';
 import PaymentModal from '../components/PaymentModal';
 import { formatUZS } from '../utils/format';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 const DebtPage = () => {
   const [search, setSearch] = useState('');
   const [paymentModalData, setPaymentModalData] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const queryClient = useQueryClient();
+  const { formatPrice } = useCurrency();
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -45,7 +47,7 @@ const DebtPage = () => {
               <AlertCircle className="w-[16px] h-[16px] text-state-danger-text" strokeWidth={1.5} /> Jami qarzdorlik
             </div>
             <div className="text-28 font-[600] text-state-danger-text tracking-tight font-mono">
-              {formatUZS(totalDebt)}
+              {formatPrice(totalDebt)}
             </div>
           </div>
         </div>
@@ -128,7 +130,7 @@ const DebtPage = () => {
                           <div className="flex items-center gap-2"><Phone className="w-[14px] h-[14px] text-tertiary" strokeWidth={1.5}/> {debtor.phone}</div>
                         </td>
                         <td className="px-3 text-right">
-                          <span className="text-15 font-[600] text-state-danger-text font-mono">{formatUZS(debtor.totalDebt)}</span>
+                        <span className="text-15 font-[600] text-state-danger-text font-mono">{formatPrice(debtor.totalDebt)}</span>
                         </td>
                         <td className="pl-3 pr-6 text-right align-middle">
                           <button 
@@ -159,7 +161,7 @@ const DebtPage = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-15 font-[700] text-state-danger-text font-mono tracking-tight">{formatUZS(debtor.totalDebt)}</div>
+                        <div className="text-15 font-[700] text-state-danger-text font-mono tracking-tight">{formatPrice(debtor.totalDebt)}</div>
                         <div className="text-[10px] text-tertiary uppercase font-[600] tracking-wider mt-0.5">Joriy qarz</div>
                       </div>
                     </div>

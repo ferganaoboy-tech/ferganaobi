@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import api from '../api';
 import toast from 'react-hot-toast';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS & UTILS
@@ -90,6 +91,7 @@ const KpiCard = ({ icon: Icon, label, value, sub, color = 'default', loading }) 
 };
 
 const ChartTooltip = ({ active, payload, label }) => {
+  const { formatShortPrice } = useCurrency();
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl shadow-xl p-3 min-w-[160px] z-50">
@@ -100,7 +102,7 @@ const ChartTooltip = ({ active, payload, label }) => {
             <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
             <span className="text-[12px] text-[var(--text-secondary)] font-[500]">{entry.name}</span>
           </div>
-          <span className="text-[13px] font-[700] text-[var(--text-primary)]">{fmtCompact(entry.value)}</span>
+          <span className="text-[13px] font-[700] text-[var(--text-primary)]">{formatShortPrice(entry.value)}</span>
         </div>
       ))}
     </div>
@@ -277,13 +279,13 @@ const ReportsPage = () => {
           <div className="space-y-6 animate-fade-in">
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <KpiCard icon={Wallet} label="Sof Tushum" color="green" loading={loading} value={fmt(kpi.netRevenue)} sub={`Umumiy: ${fmtCompact(kpi.revenue)}`} />
-              <KpiCard icon={TrendingUp} label="Sof Foyda" color="indigo" loading={loading} value={fmt(kpi.profit)} sub={`Marja: ${kpi.marginPercent?.toFixed(1)}%`} />
-              <KpiCard icon={RotateCcw} label="Vozvrat Summasi" color="red" loading={loading} value={fmt(kpi.returnAmount)} sub={`${kpi.returnCount} ta operatsiya`} />
-              <KpiCard icon={AlertCircle} label="Nasiya / Qarz" color="amber" loading={loading} value={fmt(kpi.debt)} sub="Tasdiqlangan buyurtmalardan" />
+              <KpiCard icon={Wallet} label="Sof Tushum" color="green" loading={loading} value={formatPrice(kpi.netRevenue)} sub={`Umumiy: ${formatShortPrice(kpi.revenue)}`} />
+              <KpiCard icon={TrendingUp} label="Sof Foyda" color="indigo" loading={loading} value={formatPrice(kpi.profit)} sub={`Marja: ${kpi.marginPercent?.toFixed(1)}%`} />
+              <KpiCard icon={RotateCcw} label="Vozvrat Summasi" color="red" loading={loading} value={formatPrice(kpi.returnAmount)} sub={`${kpi.returnCount} ta operatsiya`} />
+              <KpiCard icon={AlertCircle} label="Nasiya / Qarz" color="amber" loading={loading} value={formatPrice(kpi.debt)} sub="Tasdiqlangan buyurtmalardan" />
               
               <KpiCard icon={Package} label="Sotilgan Hajm" loading={loading} value={`${(kpi.netQty || 0).toLocaleString('ru')} dona`} sub={`Brak qaytgan: ${kpi.returnedQty || 0}`} />
-              <KpiCard icon={ShoppingCart} label="Buyurtmalar" loading={loading} value={kpi.orders || 0} sub={`O'rtacha chek: ${fmtCompact(kpi.avgCheck)}`} />
+              <KpiCard icon={ShoppingCart} label="Buyurtmalar" loading={loading} value={kpi.orders || 0} sub={`O'rtacha chek: ${formatShortPrice(kpi.avgCheck)}`} />
               
               {/* Payment Pie & Type Pie inline as cards */}
               <div className="col-span-2 grid grid-cols-2 gap-4">
@@ -295,7 +297,7 @@ const ReportsPage = () => {
                         <Pie data={data?.paymentChartData} dataKey="value" innerRadius="50%" outerRadius="80%" paddingAngle={2} label={DonutLabel} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
                           {data?.paymentChartData?.map(d => <Cell key={d.name} fill={PAY_COLORS[d.name] || '#888'} />)}
                         </Pie>
-                        <Tooltip formatter={v => fmt(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
+                        <Tooltip formatter={v => formatPrice(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
                         <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)' }} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -309,7 +311,7 @@ const ReportsPage = () => {
                         <Pie data={data?.typeChartData} dataKey="value" innerRadius="50%" outerRadius="80%" paddingAngle={2} label={DonutLabel} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
                           {data?.typeChartData?.map(d => <Cell key={d.name} fill={TYPE_COLORS[d.name] || '#888'} />)}
                         </Pie>
-                        <Tooltip formatter={v => fmt(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
+                        <Tooltip formatter={v => formatPrice(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
                         <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)' }} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -358,7 +360,7 @@ const ReportsPage = () => {
                         <Pie data={data?.brands?.slice(0, 8)} dataKey="revenue" nameKey="name" cx="50%" cy="50%" innerRadius="40%" outerRadius="75%" paddingAngle={2} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
                           {data?.brands?.slice(0,8).map((b, i) => <Cell key={i} fill={BRAND_COLORS[i % BRAND_COLORS.length]} />)}
                         </Pie>
-                        <Tooltip formatter={v => fmt(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
+                        <Tooltip formatter={v => formatPrice(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
                         <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)' }} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -424,8 +426,8 @@ const ReportsPage = () => {
                           </td>
                           <td className="px-4 py-3 text-[13px] font-[600] text-[var(--text-secondary)]">{p.netQty} <span className="text-[10px]">ta</span></td>
                           <td className="px-4 py-3 text-[13px] font-[600] text-right text-rose-500">{p.returnRate?.toFixed(1)}%</td>
-                          <td className="px-4 py-3 text-[13px] font-[800] text-[var(--text-primary)] text-right">{fmt(p.revenue)}</td>
-                          <td className="px-4 py-3 text-[13px] font-[700] text-indigo-500 text-right">{fmt(p.profit)}</td>
+                          <td className="px-4 py-3 text-[13px] font-[800] text-[var(--text-primary)] text-right">{formatPrice(p.revenue)}</td>
+                          <td className="px-4 py-3 text-[13px] font-[700] text-indigo-500 text-right">{formatPrice(p.profit)}</td>
                           <td className="px-4 py-3 text-[13px] font-[800] text-emerald-500 text-right">{p.margin?.toFixed(1)}%</td>
                         </tr>
                       ))
@@ -465,7 +467,7 @@ const ReportsPage = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-[14px] font-[800] text-[var(--text-primary)]">{fmtCompact(c.revenue)}</p>
+                      <p className="text-[14px] font-[800] text-[var(--text-primary)]">{formatShortPrice(c.revenue)}</p>
                       <p className="text-[11px] font-[600] text-indigo-500">{c.ordersCount} ta xarid</p>
                     </div>
                   </div>

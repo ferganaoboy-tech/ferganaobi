@@ -2,6 +2,7 @@ import React from 'react';
 import { Eye, ShoppingBag, Minus, Plus, Package, MoreHorizontal, Pencil, Trash2, Send, Grid3X3, Scale } from 'lucide-react';
 import { FaFire, FaSnowflake } from 'react-icons/fa6';
 import { formatUZS, formatQuantity } from '../../../utils/format';
+import { useCurrency } from '../../../contexts/CurrencyContext';
 import { haptics } from '../../../utils/haptics';
 import toast from 'react-hot-toast';
 
@@ -62,7 +63,7 @@ const ProductGridItem = React.forwardRef(({
             {product.quantity} {product.unit || 'dona'}
           </span>
           <span className="text-[11px] sm:text-[14px] font-[800] leading-tight tracking-tight mt-0.5">
-            {formatUZS(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")} uzs
+            {formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")} uzs
           </span>
         </div>
 
@@ -305,7 +306,7 @@ const ProductGridItem = React.forwardRef(({
         
         {/* Row 3: Price */}
         <div className="mt-auto mb-2 flex items-baseline gap-1">
-          <span className="text-[15px] sm:text-[18px] font-[800] text-primary tracking-tight leading-none">{formatUZS(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")}</span>
+          <span className="text-[15px] sm:text-[18px] font-[800] text-primary tracking-tight leading-none">{formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")}</span>
           <span className="text-[9px] sm:text-[11px] font-[700] text-gray-500 uppercase">UZS</span>
         </div>
 

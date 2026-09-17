@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Save, DollarSign, Trash2, RefreshCw, AlertTriangle, ShieldAlert, Database, Image as ImageIcon, Send, ShoppingBag, CheckCircle, XCircle, Clock, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Settings as SettingsIcon, Save, DollarSign, Trash2, RefreshCw, AlertTriangle, ShieldAlert, Database, Image as ImageIcon, Send, ShoppingBag, CheckCircle, XCircle, Clock, ToggleLeft, ToggleRight, Coins } from 'lucide-react';
 import { useSettings, useUpdateSettings } from '../hooks/useSettings';
 import { useTelegramSubscribers, useApproveSubscriber, useRejectSubscriber } from '../hooks/useTelegramSubscribers';
 import { recalculateDebts, sendDailyReportTelegram } from '../api';
@@ -9,6 +9,33 @@ import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import DatabaseManager from '../components/DatabaseManager';
+
+const CURRENCY_MODES = [
+  {
+    id: 'uzs',
+    label: "Faqat So'm",
+    desc: "Barcha narxlar va summalar so'mda ko'rsatiladi",
+    icon: '🇺🇿',
+    color: 'text-emerald-600',
+    activeBg: 'bg-emerald-500/10 border-emerald-500/40',
+  },
+  {
+    id: 'usd',
+    label: 'Faqat Dollar ($)',
+    desc: "Barcha narxlar dollarda ko'rsatiladi, DB da so'mda saqlanadi",
+    icon: '🇺🇸',
+    color: 'text-blue-600',
+    activeBg: 'bg-blue-500/10 border-blue-500/40',
+  },
+  {
+    id: 'hybrid',
+    label: "Gibrid (So'm + $)",
+    desc: "Har bir narx ikki valyutada ko'rsatiladi (hozirgi tizim kabi)",
+    icon: '🌐',
+    color: 'text-purple-600',
+    activeBg: 'bg-purple-500/10 border-purple-500/40',
+  },
+];
 
 const SettingsPage = () => {
   const { user } = useAuth();
@@ -28,6 +55,7 @@ const SettingsPage = () => {
   const { isSupported, permission, isSubscribed, subscribeToPush, unsubscribeFromPush } = usePushNotifications();
 
   const [usdRate, setUsdRate] = useState('');
+  const [currencyMode, setCurrencyMode] = useState('uzs');
   const [cartFields, setCartFields] = useState({
     showCustomer: true,
     showAddress: true,
@@ -41,6 +69,7 @@ const SettingsPage = () => {
   useEffect(() => {
     if (settingsRes?.data) {
       setUsdRate(settingsRes.data.usdExchangeRate);
+      setCurrencyMode(settingsRes.data.currencyMode || 'uzs');
       if (settingsRes.data.cartFields) {
         setCartFields(settingsRes.data.cartFields);
       }
@@ -76,7 +105,7 @@ const SettingsPage = () => {
       return toast.error("Iltimos, to'g'ri valyuta kursini kiriting");
     }
 
-    updateSettingsMutation.mutate({ usdExchangeRate: Number(usdRate), cartFields }, {
+    updateSettingsMutation.mutate({ usdExchangeRate: Number(usdRate), cartFields, currencyMode }, {
       onSuccess: () => {
         toast.success("Sozlamalar saqlandi!");
       },
@@ -86,6 +115,23 @@ const SettingsPage = () => {
     });
   };
 
+  // Valyuta rejimini darhol saqlaydi (debounce kerak emas)
+  const handleCurrencyModeChange = (newMode) => {
+    setCurrencyMode(newMode);
+    updateSettingsMutation.mutate(
+      { currencyMode: newMode },
+      {
+        onSuccess: () => {
+          const labels = { uzs: "Faqat So'm", usd: 'Faqat Dollar ($)', hybrid: "Gibrid (So'm + $)" };
+          toast.success(`✅ Valyuta rejimi: "${labels[newMode]}" ga o'zgartirildi!`, { duration: 3500 });
+        },
+        onError: (err) => {
+          setCurrencyMode(settingsRes?.data?.currencyMode || 'uzs'); // Xato bo'lsa orqaga
+          toast.error(err.response?.data?.message || 'Xatolik yuz berdi');
+        }
+      }
+    );
+  };
 
 
   const handleRecalculate = async () => {
@@ -140,14 +186,57 @@ const SettingsPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6 items-start">
         {/* Left Column */}
         <div className="flex flex-col gap-6">
-          {/* 1. Valyuta Kursi */}
+          {/* 1. Valyuta Tizimi */}
           <div className="bg-surface border border-subtle rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
             <h2 className="text-16 font-[600] text-primary mb-6 flex items-center gap-2 border-b border-subtle pb-4">
-              <DollarSign className="w-5 h-5 text-state-success-text" /> Valyuta Kursi
+              <DollarSign className="w-5 h-5 text-state-success-text" /> Valyuta Tizimi
             </h2>
 
-            <div>
-              <label className="block text-13 font-[500] text-secondary mb-2">1 USD kursi (So'mda)</label>
+            {/* ─── Valyuta Rejimi Tanlash ─── */}
+            <div className="mb-6">
+              <label className="block text-13 font-[600] text-secondary mb-3 uppercase tracking-[0.05em]">Savdo valyutasi rejimi</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {CURRENCY_MODES.map((mode) => {
+                  const isActive = currencyMode === mode.id;
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => handleCurrencyModeChange(mode.id)}
+                      disabled={updateSettingsMutation.isPending}
+                      className={`relative flex flex-col items-start gap-2 p-4 rounded-xl border-2 transition-all duration-200 text-left active:scale-[0.98] disabled:opacity-60 ${
+                        isActive
+                          ? mode.activeBg + ' shadow-sm'
+                          : 'border-subtle bg-app hover:border-default hover:bg-raised'
+                      }`}
+                    >
+                      {isActive && (
+                        <div className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-accent animate-pulse" />
+                      )}
+                      <span className="text-2xl">{mode.icon}</span>
+                      <div>
+                        <div className={`text-13 font-[700] ${isActive ? mode.color : 'text-primary'}`}>
+                          {mode.label}
+                        </div>
+                        <div className="text-11 text-tertiary mt-0.5 leading-relaxed">
+                          {mode.desc}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-11 text-tertiary mt-3 leading-relaxed">
+                Rejim o'zgarishi tizim bo'ylab (dashboard, buyurtmalar, hisobotlar) darhol kuchga kiradi. Ma'lumotlar bazasida narxlar doim so'mda saqlanadi — ma'lumot yo'qolmaydi.
+              </p>
+            </div>
+
+            {/* ─── USD Kursi ─── */}
+            <div className={`transition-all ${currencyMode === 'uzs' ? 'opacity-50 pointer-events-none' : ''}`}>
+              <label className="block text-13 font-[500] text-secondary mb-2">
+                1 USD kursi (So'mda)
+                {currencyMode === 'uzs' && <span className="ml-2 text-11 text-tertiary italic">(So'm rejimida ishlatilmaydi)</span>}
+              </label>
               <div className="relative">
                 <input 
                   type="number"
@@ -160,16 +249,16 @@ const SettingsPage = () => {
               <p className="text-12 text-tertiary mt-3 leading-relaxed bg-subtle p-3 rounded-lg border border-subtle">
                 Ushbu kursni o'zgartirganingizda, Dollarda narx belgilangan barcha mahsulotlarning So'mdagi narxi <strong className="text-primary">avtomatik tarzda qayta hisoblanadi.</strong>
               </p>
-
-              <button 
-                onClick={handleSave}
-                disabled={updateSettingsMutation.isLoading}
-                className="mt-6 h-[42px] px-6 bg-accent text-inverse rounded-xl text-14 font-[500] hover:bg-accent-hover active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm w-fit"
-              >
-                <Save className="w-[18px] h-[18px]" strokeWidth={1.5} /> 
-                {updateSettingsMutation.isLoading ? 'Saqlanmoqda...' : 'Saqlash'}
-              </button>
             </div>
+
+            <button 
+              onClick={handleSave}
+              disabled={updateSettingsMutation.isPending}
+              className="mt-6 h-[42px] px-6 bg-accent text-inverse rounded-xl text-14 font-[500] hover:bg-accent-hover active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm w-fit"
+            >
+              <Save className="w-[18px] h-[18px]" strokeWidth={1.5} /> 
+              {updateSettingsMutation.isPending ? 'Saqlanmoqda...' : 'Kurs va Rejimni Saqlash'}
+            </button>
           </div>
 
           {/* 1.5 Cart Fields */}

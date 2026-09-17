@@ -1,6 +1,7 @@
 import React from 'react';
 import { Eye, ShoppingBag, Package, Pencil, Trash2, Grid3X3, Send, Scale } from 'lucide-react';
 import { formatUZS, formatQuantity } from '../../../utils/format';
+import { useCurrency } from '../../../contexts/CurrencyContext';
 import { haptics } from '../../../utils/haptics';
 import toast from 'react-hot-toast';
 
@@ -76,7 +77,7 @@ const ProductTableDesktopRow = React.forwardRef(({
       </td>
       <td className="px-3 text-right">
         <div className="flex items-baseline justify-end gap-1" title="Sotuv narxi">
-          <span className="text-[14px] font-[600] text-primary tracking-tight">{formatUZS(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")}</span>
+          <span className="text-[14px] font-[600] text-primary tracking-tight">{formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")}</span>
           <span className="text-[10px] font-[500] text-gray-500">UZS</span>
         </div>
       </td>

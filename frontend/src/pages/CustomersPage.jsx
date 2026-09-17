@@ -10,10 +10,13 @@ import PaymentModal from '../components/PaymentModal';
 import ConfirmModal from '../components/ConfirmModal';
 import CustomSelect from '../components/CustomSelect';
 import { formatUZS, formatDate } from '../utils/format';
+import { useCurrency } from '../contexts/CurrencyContext';
 import toast from 'react-hot-toast';
 
 const CustomersPage = () => {
+  const { formatPrice } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [editingCustomer, setEditingCustomer] = useState(null);
   
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -179,14 +182,14 @@ const CustomersPage = () => {
                       <td className="px-3 text-secondary font-mono text-12">{customer.phone}</td>
                       <td className="px-3 text-right">
                         {customer.cashbackBalance > 0 ? (
-                          <span className="text-state-success-text font-[500] font-mono">{formatUZS(customer.cashbackBalance)}</span>
+                          <span className="text-state-success-text font-[500] font-mono">{formatPrice(customer.cashbackBalance)}</span>
                         ) : (
                           <span className="text-tertiary">-</span>
                         )}
                       </td>
                       <td className="px-3 text-right">
                         {customer.totalDebt > 0 ? (
-                          <span className="text-state-danger-text font-[500] font-mono">{formatUZS(customer.totalDebt)}</span>
+                          <span className="text-state-danger-text font-[500] font-mono">{formatPrice(customer.totalDebt)}</span>
                         ) : (
                           <span className="text-tertiary">-</span>
                         )}
@@ -224,13 +227,13 @@ const CustomersPage = () => {
                         {customer.cashbackBalance > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-secondary font-[500]">Keshbek:</span>
-                            <span className="text-state-success-text font-[600] font-mono">{formatUZS(customer.cashbackBalance)}</span>
+                            <span className="text-state-success-text font-[600] font-mono">{formatPrice(customer.cashbackBalance)}</span>
                           </div>
                         )}
                         {customer.totalDebt > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-secondary font-[500]">Qarzdorlik:</span>
-                            <span className="text-state-danger-text font-[600] font-mono">{formatUZS(customer.totalDebt)}</span>
+                            <span className="text-state-danger-text font-[600] font-mono">{formatPrice(customer.totalDebt)}</span>
                           </div>
                         )}
                       </div>
@@ -367,7 +370,7 @@ const CustomerSidePanel = ({ customer, onClose, onEdit, onDelete, onPayment, tab
 
             <div className="p-4 bg-state-danger-bg border border-state-danger-border rounded-md flex flex-col items-center text-center">
               <div className="text-12 text-state-danger-text font-[500] mb-1">Joriy qarzdorlik</div>
-              <div className="text-24 font-[600] text-state-danger-text tracking-tight mb-3">{formatUZS(customer.totalDebt || 0)}</div>
+              <div className="text-24 font-[600] text-state-danger-text tracking-tight mb-3">{formatPrice(customer.totalDebt || 0)}</div>
               <button 
                 onClick={onPayment}
                 className="h-8 px-4 bg-surface border border-state-danger-border text-state-danger-text rounded text-12 font-[500] hover:bg-state-danger-text hover:text-inverse transition-colors w-full"
@@ -379,7 +382,7 @@ const CustomerSidePanel = ({ customer, onClose, onEdit, onDelete, onPayment, tab
             {customer.cashbackBalance > 0 && (
               <div className="p-4 mt-4 bg-state-success-bg border border-state-success-border rounded-md flex flex-col items-center text-center">
                 <div className="text-12 text-state-success-text font-[500] mb-1">Mavjud keshbek (Bonus)</div>
-                <div className="text-24 font-[600] text-state-success-text tracking-tight mb-1">{formatUZS(customer.cashbackBalance)}</div>
+                <div className="text-24 font-[600] text-state-success-text tracking-tight mb-1">{formatPrice(customer.cashbackBalance)}</div>
                 <div className="text-11 text-state-success-text/80">Keyingi xaridlarda ishlatish mumkin</div>
               </div>
             )}
@@ -400,7 +403,7 @@ const CustomerSidePanel = ({ customer, onClose, onEdit, onDelete, onPayment, tab
                      <span className="text-11 text-tertiary">{formatDate(order.createdAt)}</span>
                    </div>
                    <div className="flex justify-between items-center">
-                     <span className="text-13 font-mono font-[500] text-primary">{formatUZS(order.totalAmount)}</span>
+                     <span className="text-13 font-mono font-[500] text-primary">{formatPrice(order.totalAmount)}</span>
                      {order.status === 'pending' && <span className="text-11 text-state-warning-text">Kutilmoqda</span>}
                      {order.status === 'confirmed' && <span className="text-11 text-state-info-text">Tasdiqlangan</span>}
                      {order.status === 'delivered' && <span className="text-11 text-state-success-text">Yetkazilgan</span>}
@@ -408,7 +411,7 @@ const CustomerSidePanel = ({ customer, onClose, onEdit, onDelete, onPayment, tab
                    </div>
                    {order.debtAmount > 0 && (
                      <div className="mt-2 pt-2 border-t border-subtle text-11 text-state-danger-text text-right">
-                       Qarz: {formatUZS(order.debtAmount)}
+                       Qarz: {formatPrice(order.debtAmount)}
                      </div>
                    )}
                  </div>
@@ -434,7 +437,7 @@ const CustomerSidePanel = ({ customer, onClose, onEdit, onDelete, onPayment, tab
                      <div className="text-11 text-tertiary">{formatDate(payment.createdAt)}</div>
                    </div>
                    <div className="text-13 font-mono font-[500] text-state-success-text">
-                     +{formatUZS(payment.amount)}
+                     +{formatPrice(payment.amount)}
                    </div>
                  </div>
                ))

@@ -37,12 +37,13 @@ exports.getSettings = async (req, res) => {
 
 exports.updateSettings = async (req, res) => {
   try {
-    const { usdExchangeRate, cartFields, features } = req.body;
+    const { usdExchangeRate, cartFields, features, currencyMode } = req.body;
     let settings = await Settings.findOne();
     
     if (!settings) {
       settings = await Settings.create({ 
         usdExchangeRate: usdExchangeRate || 12500,
+        currencyMode: currencyMode || 'uzs',
         cartFields: cartFields || undefined,
         features: features || undefined
       });
@@ -56,6 +57,11 @@ exports.updateSettings = async (req, res) => {
       if (features !== undefined) {
         const currentFeatures = settings.features?.toObject?.() || settings.features || {};
         settings.features = { ...currentFeatures, ...features };
+      }
+
+      // currencyMode — valyuta rejimini yangilash
+      if (currencyMode !== undefined && ['uzs', 'usd', 'hybrid'].includes(currencyMode)) {
+        settings.currencyMode = currencyMode;
       }
 
       // usdExchangeRate — barcha mahsulot narxlarini qayta hisoblash
@@ -87,6 +93,10 @@ exports.updateSettings = async (req, res) => {
     // Loglash
     const logDetails = [];
     if (usdExchangeRate) logDetails.push(`Kurs: 1 USD = ${usdExchangeRate} so'm`);
+    if (currencyMode) {
+      const modeLabels = { uzs: "Faqat So'm", usd: "Faqat Dollar", hybrid: "Gibrid" };
+      logDetails.push(`Valyuta rejimi: ${modeLabels[currencyMode] || currencyMode}`);
+    }
     if (features?.shiftEnabled !== undefined) logDetails.push(`Smena tizimi: ${features.shiftEnabled ? 'YOQILDI' : 'O\'CHIRILDI'}`);
     await logAction(req, 'UPDATE', 'Settings', settings._id, logDetails.join('. ') || 'Sozlamalar yangilandi');
 
@@ -95,6 +105,7 @@ exports.updateSettings = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
