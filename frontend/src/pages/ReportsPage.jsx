@@ -109,12 +109,23 @@ const ChartTooltip = ({ active, payload, label }) => {
   );
 };
 
-const DonutLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+const DonutLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, fill }) => {
   if (percent < 0.05) return null;
   const RADIAN = Math.PI / 180;
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  // Place label outside the donut to prevent clipping inside narrow slices
+  const radius = outerRadius + 15;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  
   return (
-    <text x={cx + radius * Math.cos(-midAngle * RADIAN)} y={cy + radius * Math.sin(-midAngle * RADIAN)} fill="white" textAnchor="middle" dominantBaseline="central" style={{ fontSize: 11, fontWeight: 700 }}>
+    <text 
+      x={x} 
+      y={y} 
+      fill={fill} 
+      textAnchor={x > cx ? 'start' : 'end'} 
+      dominantBaseline="central" 
+      style={{ fontSize: 12, fontWeight: 800, letterSpacing: '-0.5px' }}
+    >
       {(percent * 100).toFixed(0)}%
     </text>
   );
@@ -295,7 +306,7 @@ const ReportsPage = () => {
                   {loading ? <Skeleton className="h-[100px] w-full" /> : (
                     <ResponsiveContainer width="100%" height={120}>
                       <PieChart>
-                        <Pie data={data?.paymentChartData} dataKey="value" innerRadius="50%" outerRadius="80%" paddingAngle={2} label={DonutLabel} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
+                        <Pie data={data?.paymentChartData} dataKey="value" innerRadius="40%" outerRadius="65%" paddingAngle={2} label={DonutLabel} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
                           {data?.paymentChartData?.map(d => <Cell key={d.name} fill={PAY_COLORS[d.name] || '#888'} />)}
                         </Pie>
                         <Tooltip formatter={v => formatPrice(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
@@ -309,7 +320,7 @@ const ReportsPage = () => {
                   {loading ? <Skeleton className="h-[100px] w-full" /> : (
                     <ResponsiveContainer width="100%" height={120}>
                       <PieChart>
-                        <Pie data={data?.typeChartData} dataKey="value" innerRadius="50%" outerRadius="80%" paddingAngle={2} label={DonutLabel} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
+                        <Pie data={data?.typeChartData} dataKey="value" innerRadius="40%" outerRadius="65%" paddingAngle={2} label={DonutLabel} labelLine={false} stroke="var(--bg-surface)" strokeWidth={2}>
                           {data?.typeChartData?.map(d => <Cell key={d.name} fill={TYPE_COLORS[d.name] || '#888'} />)}
                         </Pie>
                         <Tooltip formatter={v => formatPrice(v)} contentStyle={{ borderRadius: 8, fontSize: 12, border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} />
