@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchSettings, updateSettings } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 export const useSettings = () => {
+  const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['settings'],
     queryFn: fetchSettings,
-    staleTime: 60 * 1000, // 1 daqiqa — settings tez-tez o'zgarmaydi
+    staleTime: 60 * 1000,
+    enabled: isAuthenticated,
   });
 };
 
