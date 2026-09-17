@@ -231,14 +231,13 @@ const ProductsPage = () => {
   };
 
   return (
-    <div className="flex-1 bg-background h-screen overflow-hidden flex flex-col relative">
-      <div className="p-2 sm:p-[32px_40px] h-full flex flex-col">
-        <ProductHeader 
-          totalProductsCount={totalProductsCount} 
-          openCreateModal={openCreateModal} 
-          openAiParser={() => setIsAiParserOpen(true)}
-          handleExportExcel={handleExportExcel}
-        />
+    <div className="p-2 sm:p-[32px_40px] h-full flex flex-col">
+      <ProductHeader 
+        totalProductsCount={totalProductsCount} 
+        openCreateModal={openCreateModal} 
+        openAiParser={() => setIsAiParserOpen(true)}
+        handleExportExcel={handleExportExcel}
+      />
 
       <ProductSearchAndFilters
         searchRef={searchRef}
