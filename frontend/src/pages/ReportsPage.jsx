@@ -131,6 +131,7 @@ const AbcBadge = ({ val }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ReportsPage = () => {
+  const { formatPrice, formatShortPrice } = useCurrency();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
