@@ -14,6 +14,7 @@ import { haptics } from '../utils/haptics';
 import ConfirmModal from '../components/ConfirmModal';
 import ImageViewerModal from '../components/ImageViewerModal';
 import CompareModal from '../components/CompareModal';
+import api from '../api';
 
 import ProductHeader from './products/components/ProductHeader';
 import ProductSearchAndFilters from './products/components/ProductSearchAndFilters';
