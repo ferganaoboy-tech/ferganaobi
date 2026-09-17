@@ -811,3 +811,98 @@ Output:`;
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+const ExcelJS = require('exceljs');
+
+// @desc    Export products to Excel
+// @route   GET /api/products/export-excel
+// @access  Private
+exports.exportProductsExcel = async (req, res) => {
+  try {
+    const { category, search, stockStatus, warehouse } = req.query;
+    const query = {};
+    if (category && category !== 'barchasi') query.category = category;
+    
+    // Role-based Warehouse Access
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      query.warehouse = req.user.warehouse;
+    } else if (warehouse && warehouse !== 'Barchasi') {
+      query.warehouse = warehouse;
+    }
+
+    if (stockStatus) {
+      if (stockStatus === 'tugayotgan') {
+        query.$expr = { $lte: ['$quantity', '$minStock'] };
+      } else if (stockStatus === 'passiv') {
+        query.isActive = false;
+      }
+    }
+
+    if (search) {
+      query.$or = [
+        { brand: { $regex: search, $options: 'i' } },
+        { collection: { $regex: search, $options: 'i' } },
+        { artikul: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const Product = require('../models/Product');
+    const products = await Product.find(query)
+      .populate('warehouse', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Mahsulotlar');
+
+    worksheet.columns = [
+      { header: 'Kategoriya', key: 'category', width: 15 },
+      { header: 'Artikul', key: 'artikul', width: 20 },
+      { header: 'Brend', key: 'brand', width: 15 },
+      { header: 'Kolleksiya', key: 'collection', width: 15 },
+      { header: 'Polka', key: 'polka', width: 10 },
+      { header: 'Ombor', key: 'warehouse', width: 20 },
+      { header: 'Qoldiq', key: 'quantity', width: 12 },
+      { header: 'Birlik', key: 'unit', width: 10 },
+      { header: 'Tannarx (UZS)', key: 'costPrice', width: 15 },
+      { header: 'Tannarx (USD)', key: 'costPriceUsd', width: 15 },
+      { header: 'Asosiy Narx (UZS)', key: 'pricePerRoll', width: 15 },
+      { header: 'Asosiy Narx (USD)', key: 'pricePerRollUsd', width: 15 },
+      { header: 'Ulgurji Narx (UZS)', key: 'wholesalePrice', width: 15 },
+      { header: 'Ulgurji Narx (USD)', key: 'wholesalePriceUsd', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+    ];
+
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } }; // Indigo-600
+
+    products.forEach(p => {
+      worksheet.addRow({
+        category: p.category,
+        artikul: p.artikul,
+        brand: p.brand || '',
+        collection: p.collection || '',
+        polka: p.polka || '',
+        warehouse: p.warehouse ? p.warehouse.name : 'Noma\'lum',
+        quantity: p.quantity,
+        unit: p.unit,
+        costPrice: p.costPrice || 0,
+        costPriceUsd: p.costPriceUsd || 0,
+        pricePerRoll: p.pricePerRoll || 0,
+        pricePerRollUsd: p.pricePerRollUsd || 0,
+        wholesalePrice: p.wholesalePrice || 0,
+        wholesalePriceUsd: p.wholesalePriceUsd || 0,
+        status: p.isActive === false ? 'Passiv' : (p.quantity <= (p.minStock||0) ? 'Tugayotgan' : 'Aktiv')
+      });
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=Mahsulotlar.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Excel Export Error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

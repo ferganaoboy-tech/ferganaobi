@@ -12,7 +12,8 @@ const {
   getDashboardStats,
   getCompareProducts,
   getReplenishmentRecommendations,
-  parseOrder
+  parseOrder,
+  exportProductsExcel
 } = require('../controllers/productController');
 
 router.post('/parse-order', parseOrder);
@@ -20,6 +21,7 @@ router.get('/stats/dashboard', getDashboardStats);
 router.get('/filters', getFilters);
 router.get('/compare', getCompareProducts);
 router.get('/replenishment', authorizeWithPermission('manage_products'), getReplenishmentRecommendations);
+router.get('/export-excel', authorizeWithPermission('manage_products'), exportProductsExcel);
 
 router.route('/')
   .get(getProducts)

@@ -207,13 +207,38 @@ const ProductsPage = () => {
     setOpenDropdownId(prev => prev === id ? null : id);
   };
 
+  const handleExportExcel = async () => {
+    try {
+      const toastId = toast.loading("Excel fayli tayyorlanmoqda...");
+      const params = new URLSearchParams({
+        category: filters.category,
+        search: filters.search,
+        stockStatus: filters.stockStatus,
+        warehouse: filters.warehouse
+      });
+      const res = await api.get(`/products/export-excel?${params.toString()}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Mahsulotlar.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Excel muvaffaqiyatli saqlandi!", { id: toastId });
+    } catch (err) {
+      toast.error("Excel yuklab olishda xatolik yuz berdi");
+    }
+  };
+
   return (
-    <div className="p-2 sm:p-[32px_40px] h-full flex flex-col">
-      <ProductHeader 
-        totalProductsCount={totalProductsCount} 
-        openCreateModal={openCreateModal} 
-        openAiParser={() => setIsAiParserOpen(true)}
-      />
+    <div className="flex-1 bg-background h-screen overflow-hidden flex flex-col relative">
+      <div className="p-2 sm:p-[32px_40px] h-full flex flex-col">
+        <ProductHeader 
+          totalProductsCount={totalProductsCount} 
+          openCreateModal={openCreateModal} 
+          openAiParser={() => setIsAiParserOpen(true)}
+          handleExportExcel={handleExportExcel}
+        />
 
       <ProductSearchAndFilters
         searchRef={searchRef}
