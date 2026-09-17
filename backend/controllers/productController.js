@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const Warehouse = require('../models/Warehouse');
 const { logAction } = require('../utils/logger');
 const Order = require('../models/Order');
 const Transfer = require('../models/Transfer');
@@ -821,12 +822,12 @@ exports.exportProductsExcel = async (req, res) => {
   try {
     const { category, search, stockStatus, warehouse } = req.query;
     const query = {};
-    if (category && category !== 'barchasi') query.category = category;
+    if (category && category !== 'barchasi' && category !== 'all') query.category = category;
     
     // Role-based Warehouse Access
     if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
       query.warehouse = req.user.warehouse;
-    } else if (warehouse && warehouse !== 'Barchasi') {
+    } else if (warehouse && warehouse !== 'Barchasi' && warehouse !== 'all') {
       query.warehouse = warehouse;
     }
 
