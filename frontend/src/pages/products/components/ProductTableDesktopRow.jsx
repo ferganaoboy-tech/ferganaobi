@@ -21,7 +21,7 @@ const ProductTableDesktopRow = React.forwardRef(({
   clearSearch,
   openCompareModal
 }, ref) => {
-  const { formatPrice } = useCurrency();
+  const { formatPrice, isUsd } = useCurrency();
   const tableUnit = cartUnits[product._id] || product.unit || 'rulon';
   const tableRemaining = getRemainingStock(product, tableUnit);
   const tableQty = tableRemaining <= 0 ? 0 : Math.min(cartQuantities[product._id] || 1, tableRemaining);
@@ -78,8 +78,10 @@ const ProductTableDesktopRow = React.forwardRef(({
       </td>
       <td className="px-3 text-right">
         <div className="flex items-baseline justify-end gap-1" title="Sotuv narxi">
-          <span className="text-[14px] font-[600] text-primary tracking-tight">{formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")}</span>
-          <span className="text-[10px] font-[500] text-gray-500">UZS</span>
+          <span className="text-[14px] font-[600] text-primary tracking-tight">
+            {formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "").replace("$", "").trim()}
+          </span>
+          <span className="text-[10px] font-[500] text-gray-500">{isUsd ? 'USD' : 'UZS'}</span>
         </div>
       </td>
       <td className="px-3 text-right">

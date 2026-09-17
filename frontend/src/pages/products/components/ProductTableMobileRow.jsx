@@ -26,7 +26,7 @@ const ProductTableMobileRow = React.forwardRef(({
   clearSearch,
   openCompareModal
 }, ref) => {
-  const { formatPrice } = useCurrency();
+  const { formatPrice, isUsd } = useCurrency();
   const mobileUnit = cartUnits[product._id] || product.unit || 'rulon';
   const mobileRemaining = getRemainingStock(product, mobileUnit);
   const rawQty = cartQuantities[product._id];
@@ -122,8 +122,10 @@ const ProductTableMobileRow = React.forwardRef(({
           {/* Right: Price & Stock */}
           <div className="flex flex-col items-end shrink-0">
             <div className="flex items-baseline gap-1 mb-1.5">
-              <span className="text-[16px] font-[700] text-primary leading-none">{formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")}</span>
-              <span className="text-[10px] font-[600] text-gray-500">UZS</span>
+              <span className="text-[16px] font-[700] text-primary leading-none">
+                {formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "").replace("$", "").trim()}
+              </span>
+              <span className="text-[10px] font-[600] text-gray-500">{isUsd ? 'USD' : 'UZS'}</span>
             </div>
             <div className={`text-[14px] font-[700] leading-none ${product.quantity <= product.minStock ? 'text-red-600' : 'text-emerald-600'}`}>
               {product.quantity} {product.unit || 'rulon'}

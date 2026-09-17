@@ -26,7 +26,7 @@ const ProductGridItem = React.forwardRef(({
   clearSearch,
   openCompareModal
 }, ref) => {
-  const { formatPrice } = useCurrency();
+  const { formatPrice, isUsd } = useCurrency();
   const gridUnit = cartUnits[product._id] || product.unit || 'rulon';
   const gridRemaining = getRemainingStock(product, gridUnit);
   const rawQty = cartQuantities[product._id];
@@ -307,8 +307,10 @@ const ProductGridItem = React.forwardRef(({
         
         {/* Row 3: Price */}
         <div className="mt-auto mb-2 flex items-baseline gap-1">
-          <span className="text-[15px] sm:text-[18px] font-[800] text-primary tracking-tight leading-none">{formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")}</span>
-          <span className="text-[9px] sm:text-[11px] font-[700] text-gray-500 uppercase">UZS</span>
+          <span className="text-[15px] sm:text-[18px] font-[800] text-primary tracking-tight leading-none">
+            {formatPrice(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "").replace("$", "").trim()}
+          </span>
+          <span className="text-[9px] sm:text-[11px] font-[700] text-gray-500 uppercase">{isUsd ? 'USD' : 'UZS'}</span>
         </div>
 
         {/* Row 4: Counter and Cart */}

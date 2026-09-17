@@ -1,8 +1,9 @@
 import React from 'react';
 import { Search, SlidersHorizontal, Grid3X3, Eye, ShoppingBag, ArrowUp, ArrowDown, LayoutGrid, List } from 'lucide-react';
-import { formatUZS, formatQuantity } from '../../../utils/format';
+import { formatQuantity } from '../../../utils/format';
 import toast from 'react-hot-toast';
 import { haptics } from '../../../utils/haptics';
+import { useCurrency } from '../../../contexts/CurrencyContext';
 
 const ProductSearchAndFilters = ({
   searchRef,
@@ -30,6 +31,7 @@ const ProductSearchAndFilters = ({
   viewMode,
   setViewMode
 }) => {
+  const { isUsd, usdRate, formatPrice } = useCurrency();
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center mb-4 shrink-0 w-full">
       {/* Search Input */}
@@ -153,8 +155,21 @@ const ProductSearchAndFilters = ({
                         </div>
                         
                         <div className="flex flex-col items-end gap-1.5 shrink-0 justify-center">
-                          <div className="text-[15px] font-[700] text-primary leading-none">
-                            {formatUZS(product.pricePerRoll || product.wholesalePrice).replace(" so'm", "")} <span className="text-[10px] text-gray-400 font-medium">UZS</span>
+                          <div className="flex items-center gap-1 bg-surface border border-subtle focus-within:border-accent rounded-[6px] px-2 py-0.5 transition-colors">
+                            <input 
+                              id={`suggest-price-${product._id}`}
+                              type="number"
+                              defaultValue={isUsd ? ((product.pricePerRoll || product.wholesalePrice) / usdRate).toFixed(2) : (product.pricePerRoll || product.wholesalePrice)}
+                              className="w-16 sm:w-20 text-right bg-transparent outline-none text-[14px] font-[700] text-primary leading-none p-0"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.stopPropagation();
+                                  document.getElementById(`suggest-btn-${product._id}`)?.click();
+                                }
+                              }}
+                            />
+                            <span className="text-[10px] text-gray-400 font-medium select-none">{isUsd ? 'USD' : 'UZS'}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-[11px] font-[500] text-gray-500 truncate max-w-[80px] text-right">{product.warehouse?.name}</span>
@@ -201,11 +216,21 @@ const ProductSearchAndFilters = ({
                               const inputQty = parseInt(input?.value || "1", 10);
                               const quantity = Math.min(Math.max(1, inputQty), suggestRemaining);
                               const unit = suggestUnit;
+                              
+                              const priceInput = document.getElementById(`suggest-price-${product._id}`);
+                              let customPrice = null;
+                              if (priceInput && priceInput.value) {
+                                const pVal = parseFloat(priceInput.value);
+                                if (!isNaN(pVal)) {
+                                  customPrice = isUsd ? Math.round(pVal * usdRate) : Math.round(pVal);
+                                }
+                              }
+
                               const prodWarehouseId = product.warehouse?._id || product.warehouse;
                               if (cartWarehouse && cartWarehouse !== prodWarehouseId) {
-                                setConfirmWarehouseSwitch({ product, quantity, unit });
+                                setConfirmWarehouseSwitch({ product, quantity, unit, customPrice });
                               } else {
-                                const added = addToCart(product, quantity, unit);
+                                const added = addToCart(product, quantity, unit, false, customPrice);
                                 if (added === true) {
                                   haptics.light();
                                   clearSearch();

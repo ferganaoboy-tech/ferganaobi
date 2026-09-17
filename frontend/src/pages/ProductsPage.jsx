@@ -84,8 +84,8 @@ const ProductsPage = () => {
 
   const handleConfirmWarehouseSwitch = () => {
     if (confirmWarehouseSwitch) {
-      const { product, quantity, unit } = confirmWarehouseSwitch;
-      addToCart(product, quantity, unit, true);
+      const { product, quantity, unit, customPrice } = confirmWarehouseSwitch;
+      addToCart(product, quantity, unit, true, customPrice);
       setCartQuantities(prev => ({ ...prev, [product._id]: 1 }));
     }
   };

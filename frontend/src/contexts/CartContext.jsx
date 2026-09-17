@@ -163,7 +163,7 @@ export const CartProvider = ({ children }) => {
 
   // ─── addToCart ────────────────────────────────────────────────────────────
   // ✅ FIX #5: Stale closure bartaraf — stock tekshiruvi state'dan tashqarida
-  const addToCart = useCallback((product, quantity, unit, forceWarehouseSwitch = false) => {
+  const addToCart = useCallback((product, quantity, unit, forceWarehouseSwitch = false, customPrice = null) => {
     const productWarehouseId = product.warehouse?._id || product.warehouse;
 
     // Permission check
@@ -180,7 +180,7 @@ export const CartProvider = ({ children }) => {
     // Warehouse mismatch
     if (cartWarehouse && String(cartWarehouse) !== String(productWarehouseId)) {
       if (forceWarehouseSwitch) {
-        const price = getUnitPrice(product, unit, orderType);
+        const price = customPrice !== null ? customPrice : getUnitPrice(product, unit, orderType);
         const newItem = {
           product: product._id,
           productName: product.brand || product.artikul,
@@ -189,7 +189,7 @@ export const CartProvider = ({ children }) => {
           quantity: Number(quantity),
           unitPrice: price,
           discount: 0,
-          isCustomPrice: false,
+          isCustomPrice: customPrice !== null,
           warehouse: String(productWarehouseId),
           wholesalePrice: product.wholesalePrice ?? null,
           pricePerRoll: product.pricePerRoll ?? null,
@@ -225,7 +225,7 @@ export const CartProvider = ({ children }) => {
     }
 
     setCartItems(prev => {
-      const price = getUnitPrice(product, unit, orderType);
+      const price = customPrice !== null ? customPrice : getUnitPrice(product, unit, orderType);
       const existingIdx = prev.findIndex(
         item => item.product === product._id && item.unit === unit
       );
@@ -233,7 +233,12 @@ export const CartProvider = ({ children }) => {
       if (existingIdx > -1) {
         return prev.map((item, idx) =>
           idx === existingIdx
-            ? { ...item, quantity: item.quantity + Number(quantity), unitPrice: price }
+            ? { 
+                ...item, 
+                quantity: item.quantity + Number(quantity), 
+                unitPrice: customPrice !== null ? price : item.unitPrice, 
+                isCustomPrice: customPrice !== null ? true : item.isCustomPrice 
+              }
             : item
         );
       } else {
@@ -247,7 +252,7 @@ export const CartProvider = ({ children }) => {
             quantity: Number(quantity),
             unitPrice: price,
             discount: 0,
-            isCustomPrice: false,
+            isCustomPrice: customPrice !== null,
             warehouse: String(productWarehouseId),
             wholesalePrice: product.wholesalePrice ?? null,
             pricePerRoll: product.pricePerRoll ?? null,
