@@ -30,7 +30,7 @@ const PRESETS = [
 
 const ITEMS_PER_PAGE = 10;
 const PAY_COLORS = { Naqd: '#10b981', Nasiya: '#f59e0b', Qisman: '#6366f1' };
-const TYPE_COLORS = { 'Chakana (Retail)': '#ec4899', 'Ulgurji (Wholesale)': '#3b82f6' };
+const TYPE_COLORS = { 'Ulgurji': '#ec4899', 'Sotuv': '#3b82f6' };
 const BRAND_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#14b8a6', '#6366f1'];
 
 const fmt = (val) => new Intl.NumberFormat('ru-RU').format(Math.round(val || 0)) + ' UZS';

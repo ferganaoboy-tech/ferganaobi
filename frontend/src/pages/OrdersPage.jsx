@@ -219,7 +219,7 @@ const OrdersPage = () => {
                           <div className="text-[12px] text-secondary mt-0.5">{order.seller?.name || 'Asosiy'}</div>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="text-[14px] font-[600] text-primary capitalize">{order.type === 'wholesale' ? 'Sotuv' : 'Chakana'}</div>
+                          <div className="text-[14px] font-[600] text-primary capitalize">{order.type === 'wholesale' ? 'Sotuv' : 'Ulgurji'}</div>
                           <div className="text-[12px] text-secondary mt-0.5">{order.warehouse?.name}</div>
                         </td>
                         <td className="px-5 py-4 text-right">
@@ -348,7 +348,7 @@ const OrdersPage = () => {
                       <div className="flex flex-col min-w-0">
                         <span className="text-[14px] font-[600] text-primary truncate">{order.customer?.name || 'Mijoz nomi ko\'rsatilmagan'}</span>
                         <div className="flex items-center gap-1.5 text-[12px] font-[500] text-tertiary mt-0.5">
-                          <span className="capitalize shrink-0">{order.type === 'wholesale' ? 'Sotuv' : 'Chakana'}</span>
+                          <span className="capitalize shrink-0">{order.type === 'wholesale' ? 'Sotuv' : 'Ulgurji'}</span>
                           <span className="w-1 h-1 bg-subtle rounded-full shrink-0"></span>
                           <span className="truncate">{order.warehouse?.name}</span>
                         </div>

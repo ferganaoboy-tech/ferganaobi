@@ -296,7 +296,7 @@ const CartDrawer = () => {
                         }`}
                       >
                         <span className={`text-[13px] leading-none mb-0.5 ${orderType === t ? 'text-primary font-[700]' : 'text-secondary font-[600]'}`}>
-                          {t === 'retail' ? 'Chakana' : 'Sotuv'}
+                          {t === 'retail' ? 'Ulgurji' : 'Sotuv'}
                         </span>
                         <span className={`text-[10px] leading-none ${orderType === t ? 'text-accent font-[600]' : 'text-tertiary font-[500]'}`}>
                           {t === 'retail' ? 'Optom (arzonlashtirilgan)' : 'Hamma uchun (standart)'}

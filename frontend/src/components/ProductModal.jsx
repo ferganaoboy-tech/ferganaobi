@@ -122,14 +122,14 @@ const ProductModal = ({ isOpen, onClose, product = null }) => {
     if (!formData.artikul?.trim()) { toast.error("Artikul kiritilishi shart!"); return false; }
     if (!formData.warehouse)       { toast.error("Sklad tanlanishi shart!");    return false; }
     if (!formData.costPriceUsd)    { toast.error("Kelgan narx kiritilishi shart!"); return false; }
-    if (!formData.wholesalePriceUsd) { toast.error("Chakana narx kiritilishi shart!"); return false; }
+    if (!formData.wholesalePriceUsd) { toast.error("Ulgurji narx kiritilishi shart!"); return false; }
     if (!formData.pricePerRollUsd && !formData.pricePerRoll) { toast.error("Sotuv narxi kiritilishi shart!"); return false; }
 
     const cost = Number(formData.costPriceUsd) || 0;
     const retail = Number(formData.wholesalePriceUsd) || 0;
     
     if (retail < cost) {
-      toast.error("Mantiqiy xato: Chakana narx Kelgan narxdan kam bo'lishi mumkin emas!");
+      toast.error("Mantiqiy xato: Ulgurji narx Kelgan narxdan kam bo'lishi mumkin emas!");
       return false;
     }
 
@@ -140,7 +140,7 @@ const ProductModal = ({ isOpen, onClose, product = null }) => {
       return false;
     }
     if (sale < retail) {
-      toast.error("Mantiqiy xato: Sotuv narxi Chakana narxdan kam bo'lishi mumkin emas!");
+      toast.error("Mantiqiy xato: Sotuv narxi Ulgurji narxdan kam bo'lishi mumkin emas!");
       return false;
     }
 
@@ -530,7 +530,7 @@ const ProductModal = ({ isOpen, onClose, product = null }) => {
               <div className="space-y-6">
                 <div className={`grid grid-cols-1 ${isRestrictedUser ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-5`}>
                   {!isRestrictedUser && renderPriceField("Kelgan narxi", "costPriceUsd", "costPrice", costPriceCurrency, setCostPriceCurrency, true)}
-                  {renderPriceField("Chakana narxi", "wholesalePriceUsd", "wholesalePrice", wholesalePriceCurrency, setWholesalePriceCurrency, true)}
+                  {renderPriceField("Ulgurji narxi", "wholesalePriceUsd", "wholesalePrice", wholesalePriceCurrency, setWholesalePriceCurrency, true)}
                   {renderPriceField("Sotuv narxi", "pricePerRollUsd", "pricePerRoll", pricePerRollCurrency, setPricePerRollCurrency, true)}
                 </div>
 

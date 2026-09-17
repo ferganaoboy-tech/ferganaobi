@@ -386,9 +386,9 @@ exports.getSalesReport = async (req, res) => {
     ].filter(p => p.value > 0);
 
     const typeChartData = [
-      { name: 'Chakana (Retail)', value: typeBreakdown.retail, color: '#ec4899' },
-      { name: 'Ulgurji (Wholesale)', value: typeBreakdown.wholesale, color: '#3b82f6' },
-    ].filter(p => p.value > 0);
+      { name: 'Ulgurji', value: typeBreakdown.retail, color: '#ec4899' },
+      { name: 'Sotuv', value: typeBreakdown.wholesale, color: '#3b82f6' },
+    ].filter(d => d.value > 0);
 
     const daysOfWeekNames = ['Yak', 'Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan'];
     const weekTrendData = dayOfWeekStats.map((val, idx) => ({

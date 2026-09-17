@@ -7,7 +7,7 @@ export const store = {
   warehouses: [
     { _id: 'w1', name: 'Asosiy Sklad', location: 'Toshkent sh., Uchtepa t.', color: '#3b82f6', totalProducts: 10, totalRolls: 500, totalValue: 75000000, lowStockCount: 1 },
     { _id: 'w2', name: 'Optom Sklad', location: 'Toshkent sh., Chilonzor t.', color: '#10b981', totalProducts: 5, totalRolls: 1500, totalValue: 180000000, lowStockCount: 0 },
-    { _id: 'w3', name: 'Chakana Magazin', location: 'Toshkent sh., Yunusobod t.', color: '#f59e0b', totalProducts: 15, totalRolls: 200, totalValue: 35000000, lowStockCount: 5 }
+    { _id: 'w3', name: 'Ulgurji Magazin', location: 'Toshkent sh., Yunusobod t.', color: '#f59e0b', totalProducts: 15, totalRolls: 200, totalValue: 35000000, lowStockCount: 5 }
   ],
   customers: [
     { _id: 'c1', name: 'Alijon Valiyev', type: 'retail', phone: '+998 90 123 45 67', address: 'Toshkent', totalDebt: 0 },

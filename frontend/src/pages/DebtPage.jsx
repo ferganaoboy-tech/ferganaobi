@@ -122,7 +122,7 @@ const DebtPage = () => {
                             </div>
                             <div>
                               <div className="font-[600] text-primary text-14">{debtor.name}</div>
-                              <div className="text-12 text-secondary mt-0.5">{debtor.type === 'wholesale' ? 'Sotuv mijoz' : 'Chakana mijoz'}</div>
+                              <div className="text-12 text-secondary mt-0.5">{debtor.type === 'wholesale' ? 'Sotuv mijoz' : 'Ulgurji mijoz'}</div>
                             </div>
                           </div>
                         </td>
@@ -157,7 +157,7 @@ const DebtPage = () => {
                         </div>
                         <div>
                           <div className="text-14 font-[600] text-primary">{debtor.name}</div>
-                          <div className="text-12 text-secondary mt-0.5">{debtor.type === 'wholesale' ? 'Sotuv mijoz' : 'Chakana mijoz'}</div>
+                          <div className="text-12 text-secondary mt-0.5">{debtor.type === 'wholesale' ? 'Sotuv mijoz' : 'Ulgurji mijoz'}</div>
                         </div>
                       </div>
                       <div className="text-right">

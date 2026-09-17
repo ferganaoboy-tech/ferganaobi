@@ -129,7 +129,7 @@ const CustomersPage = () => {
               onChange={(val) => handleFilterChange({ target: { name: 'type', value: val } })}
               options={[
                 { value: 'Barchasi', label: 'Barcha turlar' },
-                { value: 'retail', label: 'Chakana' },
+                { value: 'retail', label: 'Ulgurji' },
                 { value: 'wholesale', label: 'Sotuv' }
               ]}
             />
@@ -175,7 +175,7 @@ const CustomersPage = () => {
                           {customer.type === 'wholesale' ? (
                             <span className="text-11 bg-state-info-bg text-state-info-text border border-state-info-border px-1.5 rounded font-[500]">Sotuv</span>
                           ) : (
-                            <span className="text-11 bg-state-neutral-bg text-state-neutral-text border border-state-neutral-border px-1.5 rounded font-[500]">Chakana</span>
+                            <span className="text-11 bg-state-neutral-bg text-state-neutral-text border border-state-neutral-border px-1.5 rounded font-[500]">Ulgurji</span>
                           )}
                         </div>
                       </td>
@@ -218,7 +218,7 @@ const CustomersPage = () => {
                       {customer.type === 'wholesale' ? (
                         <span className="text-10 bg-state-info-bg text-state-info-text border border-state-info-border px-1.5 py-0.5 rounded font-[500] shrink-0">Sotuv</span>
                       ) : (
-                        <span className="text-10 bg-state-neutral-bg text-state-neutral-text border border-state-neutral-border px-1.5 py-0.5 rounded font-[500] shrink-0">Chakana</span>
+                        <span className="text-10 bg-state-neutral-bg text-state-neutral-text border border-state-neutral-border px-1.5 py-0.5 rounded font-[500] shrink-0">Ulgurji</span>
                       )}
                     </div>
                     
@@ -310,7 +310,7 @@ const CustomerSidePanel = ({ customer, onClose, onEdit, onDelete, onPayment, tab
             {customer.type === 'wholesale' ? (
               <span className="text-11 bg-state-info-bg text-state-info-text border border-state-info-border px-1.5 rounded font-[500] h-5 flex items-center">Sotuv</span>
             ) : (
-              <span className="text-11 bg-state-neutral-bg text-state-neutral-text border border-state-neutral-border px-1.5 rounded font-[500] h-5 flex items-center">Chakana</span>
+              <span className="text-11 bg-state-neutral-bg text-state-neutral-text border border-state-neutral-border px-1.5 rounded font-[500] h-5 flex items-center">Ulgurji</span>
             )}
           </div>
         </div>

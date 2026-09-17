@@ -187,7 +187,7 @@ const OrderModal = ({ isOpen, onClose }) => {
                     {['wholesale', 'retail'].map(t => (
                       <label key={t} className={`flex-1 flex items-center justify-center text-13 cursor-pointer transition-colors ${formData.type === t ? 'bg-subtle text-primary font-[500]' : 'text-secondary hover:bg-subtle'}`}>
                         <input type="radio" name="type" value={t} checked={formData.type === t} onChange={handleChange} className="hidden" />
-                        {t === 'retail' ? 'Chakana' : 'Sotuv'}
+                        {t === 'retail' ? 'Ulgurji' : 'Sotuv'}
                       </label>
                     ))}
                   </div>
