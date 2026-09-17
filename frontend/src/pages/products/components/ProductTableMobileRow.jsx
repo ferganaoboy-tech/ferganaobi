@@ -26,6 +26,7 @@ const ProductTableMobileRow = React.forwardRef(({
   clearSearch,
   openCompareModal
 }, ref) => {
+  const { formatPrice } = useCurrency();
   const mobileUnit = cartUnits[product._id] || product.unit || 'rulon';
   const mobileRemaining = getRemainingStock(product, mobileUnit);
   const rawQty = cartQuantities[product._id];

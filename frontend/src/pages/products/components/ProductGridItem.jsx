@@ -26,6 +26,7 @@ const ProductGridItem = React.forwardRef(({
   clearSearch,
   openCompareModal
 }, ref) => {
+  const { formatPrice } = useCurrency();
   const gridUnit = cartUnits[product._id] || product.unit || 'rulon';
   const gridRemaining = getRemainingStock(product, gridUnit);
   const rawQty = cartQuantities[product._id];

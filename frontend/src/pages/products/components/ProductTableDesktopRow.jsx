@@ -21,6 +21,7 @@ const ProductTableDesktopRow = React.forwardRef(({
   clearSearch,
   openCompareModal
 }, ref) => {
+  const { formatPrice } = useCurrency();
   const tableUnit = cartUnits[product._id] || product.unit || 'rulon';
   const tableRemaining = getRemainingStock(product, tableUnit);
   const tableQty = tableRemaining <= 0 ? 0 : Math.min(cartQuantities[product._id] || 1, tableRemaining);
