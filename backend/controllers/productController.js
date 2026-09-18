@@ -821,7 +821,10 @@ const ExcelJS = require('exceljs');
 exports.exportProductsExcel = async (req, res) => {
   try {
     const { category, search, stockStatus, warehouse } = req.query;
-    const query = {};
+    
+    // Asosiy filter: o'chirilmaganlarni olish
+    const query = { isActive: true };
+    
     if (category && category !== 'barchasi' && category !== 'all') query.category = category;
     
     // Role-based Warehouse Access
@@ -863,6 +866,7 @@ exports.exportProductsExcel = async (req, res) => {
       { header: 'Kolleksiya', key: 'collection', width: 15 },
       { header: 'Polka', key: 'polka', width: 10 },
       { header: 'Ombor', key: 'warehouse', width: 20 },
+      { header: 'Jami Kelgan', key: 'totalReceived', width: 15 },
       { header: 'Qoldiq', key: 'quantity', width: 12 },
       { header: 'Birlik', key: 'unit', width: 10 },
       { header: 'Tannarx (UZS)', key: 'costPrice', width: 15 },
@@ -878,6 +882,9 @@ exports.exportProductsExcel = async (req, res) => {
     worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } }; // Indigo-600
 
     products.forEach(p => {
+      // Jami kelgan = hozirgi qoldiq + shu paytgacha sotilganlari
+      const totalReceived = (p.quantity || 0) + (p.soldQuantity || 0);
+
       worksheet.addRow({
         category: p.category,
         artikul: p.artikul,
@@ -885,6 +892,7 @@ exports.exportProductsExcel = async (req, res) => {
         collection: p.collection || '',
         polka: p.polka || '',
         warehouse: p.warehouse ? p.warehouse.name : 'Noma\'lum',
+        totalReceived: totalReceived,
         quantity: p.quantity,
         unit: p.unit,
         costPrice: p.costPrice || 0,
