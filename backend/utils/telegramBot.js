@@ -1,5 +1,32 @@
 const TelegramSubscriber = require('../models/TelegramSubscriber');
 const Warehouse = require('../models/Warehouse');
+const Settings = require('../models/Settings');
+
+/**
+ * Helper: Baza sozlamalaridan kelib chiqib summani formatlash (Senior daraja)
+ */
+const getFormattedPrice = async (amountInUzs) => {
+  if (!amountInUzs) return "0 so'm";
+  
+  try {
+    const settings = await Settings.findOne();
+    const mode = settings?.currencyMode || 'uzs';
+    const rate = settings?.usdExchangeRate || 12500;
+    
+    if (mode === 'usd') {
+      return '$ ' + (amountInUzs / rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    if (mode === 'hybrid') {
+      const uzs = amountInUzs.toLocaleString('ru-RU') + " so'm";
+      const usd = '$ ' + (amountInUzs / rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return `${uzs} / ${usd}`;
+    }
+    return amountInUzs.toLocaleString('ru-RU') + " so'm";
+  } catch (err) {
+    console.warn("Valyutani formatlashda xatolik:", err);
+    return amountInUzs.toLocaleString('ru-RU') + " so'm"; // Fallback
+  }
+};
 
 /**
  * Helper: Exponential backoff bilan xabar yuborish
@@ -274,16 +301,15 @@ exports.sendReturnReceipt = async (returnDoc) => {
     const orderNumber = returnDoc.order?.orderNumber || '';
 
     let itemsText = '';
-    returnDoc.items.forEach((item, index) => {
+    for (let i = 0; i < returnDoc.items.length; i++) {
+      const item = returnDoc.items[i];
       const productName = item.product?.brand || 'Mahsulot';
       const artikul = item.product?.artikul || '';
       const unit = item.unit || 'dona';
-      const total = item.refundAmount ? item.refundAmount.toLocaleString('ru-RU') : '0';
-      itemsText += `${index + 1}. 🔄 <b>${productName}</b> (${artikul})\n`;
-      itemsText += `      📦 ${item.quantity} ${unit} qaytdi (Summa: ${total} so'm)\n`;
-    });
-
-    const formatMoney = (amount) => amount ? amount.toLocaleString('ru-RU') + " so'm" : "0 so'm";
+      const totalStr = await getFormattedPrice(item.refundAmount);
+      itemsText += `${i + 1}. 🔄 <b>${productName}</b> (${artikul})\n`;
+      itemsText += `      📦 ${item.quantity} ${unit} qaytdi (Summa: ${totalStr})\n`;
+    }
 
     // Vozvratlar Telegramga yuborilmasligi uchun olib tashlandi, faqat web sahifada aks etadi
     return true;
@@ -304,16 +330,15 @@ exports.sendQuickReturnReceipt = async (returnDoc) => {
     const warehouseId = returnDoc.warehouse?._id || returnDoc.warehouse;
 
     let itemsText = '';
-    returnDoc.items.forEach((item, index) => {
+    for (let i = 0; i < returnDoc.items.length; i++) {
+      const item = returnDoc.items[i];
       const productName = item.product?.brand || item.product?.artikul || "Noma'lum mahsulot";
       const artikul = item.product?.artikul || '';
       const unit = item.unit || 'dona';
-      const total = item.refundAmount ? item.refundAmount.toLocaleString('ru-RU') : '0';
-      itemsText += `${index + 1}. 🔄 <b>${productName}</b> (${artikul})\n`;
-      itemsText += `      📦 ${item.quantity} ${unit} qabul qilindi (Summa: ${total} so'm)\n`;
-    });
-
-    const formatMoney = (amount) => amount ? amount.toLocaleString('ru-RU') + " so'm" : "0 so'm";
+      const totalStr = await getFormattedPrice(item.refundAmount);
+      itemsText += `${i + 1}. 🔄 <b>${productName}</b> (${artikul})\n`;
+      itemsText += `      📦 ${item.quantity} ${unit} qabul qilindi (Summa: ${totalStr})\n`;
+    }
 
     // Vozvratlar Telegramga yuborilmasligi uchun olib tashlandi, faqat web sahifada aks etadi
     return true;
@@ -574,10 +599,11 @@ exports.sendPaymentReceipt = async (payment) => {
     if (!token) return false;
 
     const customerName = payment.customer?.name || "Noma'lum mijoz";
-    const formatMoney = (amount) => amount ? amount.toLocaleString('ru-RU') + " so'm" : "0 so'm";
-    const method = payment.method === 'naqd' ? '💵 Naqd' : '💳 Karta';
+    const formattedAmount = await getFormattedPrice(payment.amount);
+    
+    const method = payment.method === 'naqd' ? '💵 Naqd' : payment.method === 'card' ? '💳 Karta' : '🏦 Ko\'chirma';
     const orderText = payment.order
-      ? `🧾 <b>Buyurtma uchun:</b> ${payment.order.orderNumber}`
+      ? `🧾 <b>Buyurtma uchun:</b> ${payment.order.orderNumber || payment.order}`
       : '📌 <b>Umumiy qarz uchun</b>';
 
     const message = `
@@ -585,7 +611,7 @@ exports.sendPaymentReceipt = async (payment) => {
 
 👤 <b>Mijoz:</b> ${customerName}
 ${orderText}
-💰 <b>Summa:</b> ${formatMoney(payment.amount)}
+💰 <b>Summa:</b> ${formattedAmount}
 🏦 <b>To'lov usuli:</b> ${method}
 💬 <b>Izoh:</b> ${payment.notes || "Yo'q"}
 👨‍💻 <b>Qabul qildi:</b> ${payment.receivedBy || 'Tizim'}

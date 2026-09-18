@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Banknote } from 'lucide-react';
 import { useCreatePayment } from '../hooks/usePayments';
 import { useOrders } from '../hooks/useOrders';
-import { formatUZS } from '../utils/format';
+import { useCurrency } from '../contexts/CurrencyContext';
 import toast from 'react-hot-toast';
 import CustomSelect from './CustomSelect';
 
@@ -11,6 +11,7 @@ const PaymentModal = ({ isOpen, onClose, customerId = null, customerName = '', t
   const createMutation = useCreatePayment();
   const { data: ordersRes } = useOrders({ customer: customerId, limit: 100 }, { enabled: !!customerId && isOpen });
   const orders = ordersRes?.data || [];
+  const { inputSymbol, toUzs, formatPrice } = useCurrency();
 
   const [formData, setFormData] = useState({
     amount: '', method: 'cash', notes: '', orderId: ''
@@ -30,23 +31,23 @@ const PaymentModal = ({ isOpen, onClose, customerId = null, customerName = '', t
     e.preventDefault();
     if (!formData.amount) return;
     
-    const amount = Number(formData.amount);
+    const amountUzs = toUzs(formData.amount);
     let isFullyPaid = false;
 
     if (formData.orderId) {
       const order = debtOrders.find(o => o._id === formData.orderId);
-      if (order && amount >= order.debtAmount) {
+      if (order && amountUzs >= order.debtAmount) {
         isFullyPaid = true;
       }
     } else {
-      if (amount >= totalDebt) {
+      if (amountUzs >= totalDebt) {
         isFullyPaid = true;
       }
     }
 
     createMutation.mutate({
       customer: customerId,
-      amount: amount,
+      amount: amountUzs,
       method: formData.method,
       order: formData.orderId || undefined,
       notes: formData.notes
@@ -90,8 +91,8 @@ const PaymentModal = ({ isOpen, onClose, customerId = null, customerName = '', t
           </div>
 
           <div>
-            <label className={labelClass}>To'lov summasi (so'm) *</label>
-            <input required type="number" name="amount" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className={`${inputClass} font-mono`} autoFocus />
+            <label className={labelClass}>To'lov summasi ({inputSymbol}) *</label>
+            <input required type="number" step="any" name="amount" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className={`${inputClass} font-mono`} autoFocus />
           </div>
 
           <div>
@@ -113,7 +114,7 @@ const PaymentModal = ({ isOpen, onClose, customerId = null, customerName = '', t
               onChange={(val) => setFormData({...formData, orderId: val})}
               options={[
                 { value: '', label: 'Umumiy qarzdan uzish' },
-                ...debtOrders.map(o => ({ value: o._id, label: `Buyurtma ${o.orderNumber} - Qarz: ${formatUZS(o.debtAmount)}` }))
+                ...debtOrders.map(o => ({ value: o._id, label: `Buyurtma ${o.orderNumber} - Qarz: ${formatPrice(o.debtAmount)}` }))
               ]}
             />
           </div>
@@ -144,3 +145,4 @@ const PaymentModal = ({ isOpen, onClose, customerId = null, customerName = '', t
 };
 
 export default PaymentModal;
+

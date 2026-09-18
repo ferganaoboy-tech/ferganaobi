@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, Plus, Minus, Trash2, RefreshCcw, Package } from 'lucide-react';
 import { useProducts } from '../hooks/useProducts';
 import { useCreateQuickReturn } from '../hooks/useReturns';
-import { formatUZS } from '../utils/format';
+import { useCurrency } from '../contexts/CurrencyContext';
 import toast from 'react-hot-toast';
 import { haptics } from '../utils/haptics';
 import ConfirmModal from '../components/ConfirmModal';
@@ -11,6 +11,8 @@ const QuickReturnPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef(null);
+  
+  const { formatPrice, inputSymbol, toUzs, getPriceField } = useCurrency();
 
   // Debounce search
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -65,7 +67,7 @@ const QuickReturnPage = () => {
     setReturnItems(prev => prev.filter(i => i.product._id !== productId));
   };
 
-  const totalCalculatedRefund = returnItems.reduce((acc, item) => {
+  const totalCalculatedRefundUzs = returnItems.reduce((acc, item) => {
     return acc + (item.quantity * item.product.pricePerRoll);
   }, 0);
 
@@ -88,7 +90,7 @@ const QuickReturnPage = () => {
         quantity: i.quantity,
         unitPrice: i.product.pricePerRoll,
       })),
-      totalRefundAmount: Number(refundAmountStr) || 0,
+      totalRefundAmount: refundAmountStr ? toUzs(refundAmountStr) : 0,
       reason: 'Tezkor vozvrat'
     };
 
@@ -144,7 +146,7 @@ const QuickReturnPage = () => {
                     >
                       <div>
                         <div className="text-14 font-[600] text-primary">{p.brand || p.artikul}</div>
-                        <div className="text-12 text-tertiary font-mono">{p.artikul} • {formatUZS(p.pricePerRoll)}/rl</div>
+                        <div className="text-12 text-tertiary font-mono">{p.artikul} • {formatPrice(p.pricePerRoll)}/rl</div>
                       </div>
                       <button className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center pointer-events-none">
                         <Plus className="w-4 h-4" />
@@ -214,13 +216,14 @@ const QuickReturnPage = () => {
           <div className="bg-surface border border-subtle rounded-xl p-4 mt-4 shadow-sm space-y-4">
             <div className="flex justify-between items-center text-13">
               <span className="text-secondary font-[500]">Hisoblangan qiymat (tavsiya):</span>
-              <span className="font-mono font-[600] text-primary">{formatUZS(totalCalculatedRefund)}</span>
+              <span className="font-mono font-[600] text-primary">{formatPrice(totalCalculatedRefundUzs)}</span>
             </div>
             
             <div className="border-t border-subtle pt-3">
-              <label className="block text-11 font-[600] text-secondary mb-1.5 uppercase">Mijozga berilgan summa (so'm)</label>
+              <label className="block text-11 font-[600] text-secondary mb-1.5 uppercase">Mijozga berilgan summa ({inputSymbol})</label>
               <input 
                 type="number"
+                step="any"
                 placeholder="Masalan: 0 yoki 150000"
                 value={refundAmountStr}
                 onChange={(e) => setRefundAmountStr(e.target.value)}
@@ -250,7 +253,7 @@ const QuickReturnPage = () => {
         onClose={() => setConfirmSubmit(false)}
         onConfirm={confirmReturn}
         title="Vozvratni tasdiqlash"
-        message={`Rostdan ham ${returnItems.length} xil mahsulotni ${refundAmountStr ? formatUZS(Number(refundAmountStr)) : '0 so\'m'} evaziga qaytarib olmoqchimisiz? Sklad miqdori avtomatik ko'payadi.`}
+        message={`Rostdan ham ${returnItems.length} xil mahsulotni ${refundAmountStr ? formatPrice(toUzs(refundAmountStr)) : formatPrice(0)} evaziga qaytarib olmoqchimisiz? Sklad miqdori avtomatik ko'payadi.`}
         confirmText="Tasdiqlash"
         isDanger={false}
       />

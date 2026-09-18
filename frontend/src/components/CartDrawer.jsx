@@ -573,14 +573,15 @@ const CartDrawer = () => {
 
                 {checkoutData.paymentType === 'qisman' && (
                   <div>
-                    <label className={labelClass}>To'lanayotgan summa (so'm)</label>
+                    <label className={labelClass}>To'lanayotgan summa ({inputSymbol})</label>
                     <input
                       type="number"
+                      step="any"
                       name="paidAmount"
                       value={checkoutData.paidAmount}
                       onChange={handleCheckoutChange}
                       className={`${inputClass} font-mono`}
-                      placeholder="Masalan: 500 000"
+                      placeholder="Masalan: 500"
                     />
                   </div>
                 )}
@@ -635,7 +636,7 @@ const CartDrawer = () => {
                 <div className="flex flex-col items-end">
                   <span className="text-[11px] font-[600] text-state-danger-text uppercase tracking-[0.05em] mb-1">Qarzga:</span>
                   <span className="text-14 font-mono font-[600] text-state-danger-text bg-state-danger-bg border border-state-danger-border px-2.5 py-1 rounded-lg shadow-sm">
-                    {formatPrice(debtAmount).replace(" so'm", "")} <span className="text-[10px] text-state-danger-text/70 uppercase tracking-wide">{inputSymbol || "so'm"}</span>
+                    {formatPrice(debtAmount)}
                   </span>
                 </div>
               )}

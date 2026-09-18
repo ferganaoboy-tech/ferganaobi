@@ -5,7 +5,8 @@ import { useCustomers } from '../hooks/useCustomers';
 import { useProducts } from '../hooks/useProducts';
 import { useCreateOrder } from '../hooks/useOrders';
 import { useDebounce } from '../hooks/useDebounce';
-import { formatUZS, formatQuantity } from '../utils/format';
+import { formatQuantity } from '../utils/format';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { BounceLoader } from 'react-spinners';
 import CustomSelect from './CustomSelect';
 import toast from 'react-hot-toast';
@@ -26,6 +27,7 @@ const OrderModal = ({ isOpen, onClose }) => {
   const allProducts = prodRes?.data || [];
 
   const createOrderMutation = useCreateOrder();
+  const { formatPrice, inputSymbol, toUzs } = useCurrency();
 
   const getTodayStr = () => {
     const today = new Date();
@@ -114,7 +116,7 @@ const OrderModal = ({ isOpen, onClose }) => {
   const cashbackUsed = formData.useCashback ? Math.min(maxCashback, totalOrderAmount) : 0;
   const amountToPay = totalOrderAmount - cashbackUsed;
   
-  const debtAmount = amountToPay - (formData.paymentType === 'naqd' ? amountToPay : Number(formData.paidAmount || 0));
+  const debtAmount = amountToPay - (formData.paymentType === 'naqd' ? amountToPay : toUzs(Number(formData.paidAmount || 0)));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -124,7 +126,7 @@ const OrderModal = ({ isOpen, onClose }) => {
     setSubmitting(true);
     const payload = {
       ...formData,
-      paidAmount: formData.paymentType === 'naqd' ? amountToPay : (formData.paymentType === 'nasiya' ? 0 : Number(formData.paidAmount)),
+      paidAmount: formData.paymentType === 'naqd' ? amountToPay : (formData.paymentType === 'nasiya' ? 0 : toUzs(Number(formData.paidAmount))),
       status: 'confirmed'
     };
     createOrderMutation.mutate(payload, { 
@@ -262,7 +264,7 @@ const OrderModal = ({ isOpen, onClose }) => {
                       </div>
                       
                       <div className="mt-auto flex justify-between items-center pt-3 border-t border-subtle">
-                        <div className="text-14 font-mono font-[600] text-primary">{formatUZS(currentSubtotal)}</div>
+                        <div className="text-14 font-mono font-[600] text-primary">{formatPrice(currentSubtotal)}</div>
                         <button type="button" onClick={addItem} className="h-8 px-3 bg-primary text-inverse rounded text-12 font-[500] hover:bg-accent-hover transition-colors">Qo'shish</button>
                       </div>
                     </>
@@ -288,7 +290,7 @@ const OrderModal = ({ isOpen, onClose }) => {
                       <tr key={idx} className="border-b border-subtle last:border-0">
                         <td className="px-3 py-2"><div className="font-[500] text-primary">{item.productName}</div><div className="text-11 text-secondary font-mono">{item.artikul}</div></td>
                         <td className="px-3 py-2 text-right">{item.quantity} {item.unit}</td>
-                        <td className="px-3 py-2 text-right font-mono text-primary font-[500]">{formatUZS(item.subtotal)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-primary font-[500]">{formatPrice(item.subtotal)}</td>
                         <td className="px-3 py-2"><button type="button" onClick={() => removeItem(idx)} className="text-tertiary hover:text-state-danger-text"><Trash2 className="w-[14px] h-[14px]" strokeWidth={1.5} /></button></td>
                       </tr>
                     ))}
@@ -316,8 +318,8 @@ const OrderModal = ({ isOpen, onClose }) => {
 
                 {formData.paymentType === 'qisman' && (
                   <div className="col-span-2">
-                    <label className={labelClass}>To'lanayotgan summa (so'm)</label>
-                    <input type="number" name="paidAmount" value={formData.paidAmount} onChange={handleChange} className={`${inputClass} font-mono`} />
+                    <label className={labelClass}>To'lanayotgan summa ({inputSymbol})</label>
+                    <input type="number" step="any" name="paidAmount" value={formData.paidAmount} onChange={handleChange} className={`${inputClass} font-mono`} />
                   </div>
                 )}
 
@@ -325,7 +327,7 @@ const OrderModal = ({ isOpen, onClose }) => {
                   <div className="col-span-2 flex items-center justify-between p-3 border border-state-success-border bg-state-success-bg rounded-md">
                     <div>
                       <div className="text-13 font-[600] text-state-success-text">Keshbek ishlatish</div>
-                      <div className="text-11 text-state-success-text/80">Mavjud bonus: {formatUZS(maxCashback)}</div>
+                      <div className="text-11 text-state-success-text/80">Mavjud bonus: {formatPrice(maxCashback)}</div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" name="useCashback" checked={formData.useCashback} onChange={handleChange} className="sr-only peer" />
@@ -335,12 +337,12 @@ const OrderModal = ({ isOpen, onClose }) => {
                 )}
 
                 <div className="col-span-2 bg-subtle rounded-md p-4 border border-default">
-                  <div className="flex justify-between text-13 mb-1"><span className="text-secondary">Jami summa:</span><span className="font-mono text-primary font-[500]">{formatUZS(totalOrderAmount)}</span></div>
+                  <div className="flex justify-between text-13 mb-1"><span className="text-secondary">Jami summa:</span><span className="font-mono text-primary font-[500]">{formatPrice(totalOrderAmount)}</span></div>
                   {formData.useCashback && (
-                    <div className="flex justify-between text-13 mb-1 text-state-success-text font-[500]"><span className="text-state-success-text/80">Ishlatilgan keshbek:</span><span className="font-mono">-{formatUZS(cashbackUsed)}</span></div>
+                    <div className="flex justify-between text-13 mb-1 text-state-success-text font-[500]"><span className="text-state-success-text/80">Ishlatilgan keshbek:</span><span className="font-mono">-{formatPrice(cashbackUsed)}</span></div>
                   )}
                   {['nasiya', 'qisman'].includes(formData.paymentType) && (
-                    <div className="flex justify-between text-13 mt-2 pt-2 border-t border-default"><span className="text-secondary">Qarzga:</span><span className="font-mono text-state-danger-text font-[600]">{formatUZS(debtAmount)}</span></div>
+                    <div className="flex justify-between text-13 mt-2 pt-2 border-t border-default"><span className="text-secondary">Qarzga:</span><span className="font-mono text-state-danger-text font-[600]">{formatPrice(debtAmount)}</span></div>
                   )}
                 </div>
 
