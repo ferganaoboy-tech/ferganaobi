@@ -14,6 +14,7 @@ import { haptics } from '../utils/haptics';
 import ConfirmModal from '../components/ConfirmModal';
 import ImageViewerModal from '../components/ImageViewerModal';
 import CompareModal from '../components/CompareModal';
+import ProductHistoryDrawer from '../components/ProductHistoryDrawer';
 import api from '../api';
 
 import ProductHeader from './products/components/ProductHeader';
@@ -55,6 +56,7 @@ const ProductsPage = () => {
   const [cartUnits, setCartUnits] = useState({});
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [confirmWarehouseSwitch, setConfirmWarehouseSwitch] = useState(null);
+  const [historyProductId, setHistoryProductId] = useState(null);
 
   const getRemainingStock = (product, unit) => {
     if (!product) return 0;
@@ -314,6 +316,7 @@ const ProductsPage = () => {
                 handleDelete={handleDelete}
                 clearSearch={clearSearch}
                 openCompareModal={openCompareModal}
+                openHistoryDrawer={(id) => setHistoryProductId(id)}
               />
             ))}
           </div>
@@ -352,6 +355,7 @@ const ProductsPage = () => {
                       handleDelete={handleDelete}
                       clearSearch={clearSearch}
                       openCompareModal={openCompareModal}
+                      openHistoryDrawer={(id) => setHistoryProductId(id)}
                     />
                   ))}
                 </tbody>
@@ -382,6 +386,7 @@ const ProductsPage = () => {
                   handleDelete={handleDelete}
                   clearSearch={clearSearch}
                   openCompareModal={openCompareModal}
+                  openHistoryDrawer={(id) => setHistoryProductId(id)}
                 />
               ))}
             </div>
@@ -402,6 +407,12 @@ const ProductsPage = () => {
       <ConfirmModal isOpen={!!confirmWarehouseSwitch} onClose={() => setConfirmWarehouseSwitch(null)} onConfirm={handleConfirmWarehouseSwitch} title="Skladni almashtirish" message="Savatda boshqa skladdan mahsulot bor. Savatni tozalab, yangi skladdan boshlaymizmi?" confirmText="Almashtirish" cancelText="Bekor qilish" isDanger={true} />
       <CompareModal isOpen={!!compareProduct} onClose={() => setCompareProduct(null)} product={compareProduct} />
       {viewerImages && <ImageViewerModal images={viewerImages} onClose={() => setViewerImages(null)} />}
+      {historyProductId && (
+        <ProductHistoryDrawer
+          productId={historyProductId}
+          onClose={() => setHistoryProductId(null)}
+        />
+      )}
     </div>
   );
 };

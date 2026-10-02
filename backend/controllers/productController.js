@@ -1,8 +1,10 @@
-const Product = require('../models/Product');
+﻿const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const { logAction } = require('../utils/logger');
 const Order = require('../models/Order');
-const Transfer = require('../models/Transfer');
+
+const Return = require('../models/Return');
+
 const { cloudinary } = require('../middleware/upload');
 
 // @desc    Get all products
@@ -912,6 +914,166 @@ exports.exportProductsExcel = async (req, res) => {
     res.end();
   } catch (error) {
     console.error('Excel Export Error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get product history (orders, returns, transfers)
+// @route   GET /api/products/:id/history
+// @access  Private
+exports.getProductHistory = async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    const productId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ success: false, message: 'ID noto\'g\'ri' });
+    }
+
+    const product = await Product.findById(productId).populate('warehouse', 'name color').lean();
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Mahsulot topilmadi' });
+    }
+
+    // Role-based warehouse access
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      const productWh = (product.warehouse?._id || product.warehouse)?.toString();
+      const userWh = (req.user.warehouse?._id || req.user.warehouse)?.toString();
+      if (productWh !== userWh) {
+        return res.status(403).json({ success: false, message: 'Bu mahsulot tarixini ko\'rishga ruxsatingiz yo\'q.' });
+      }
+    }
+
+    const objId = new mongoose.Types.ObjectId(productId);
+
+    // Run all 3 queries in parallel for performance
+    const [orders, returns, transfers] = await Promise.all([
+      // 1. Orders that contain this product
+      Order.find({
+        'items.product': objId,
+        status: { $ne: 'cancelled' }
+      })
+        .populate('customer', 'name phone')
+        .populate('warehouse', 'name color')
+        .sort({ createdAt: -1 })
+        .lean(),
+
+      // 2. Returns that contain this product
+      Return.find({ 'items.product': objId })
+        .populate('customer', 'name phone')
+        .populate('order', 'orderNumber')
+        .populate('warehouse', 'name color')
+        .sort({ createdAt: -1 })
+        .lean(),
+
+      // 3. Transfers that contain this product
+      Transfer.find({ 'items.product': objId })
+        .populate('fromWarehouse', 'name color')
+        .populate('toWarehouse', 'name color')
+        .populate('sentBy', 'name')
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
+
+    // Map orders to unified history events
+    const orderEvents = orders.map(o => {
+      const item = o.items.find(i => i.product?.toString() === productId);
+      return {
+        type: 'order',
+        id: o._id,
+        date: o.createdAt,
+        orderNumber: o.orderNumber,
+        customer: o.customer,
+        warehouse: o.warehouse,
+        quantity: item?.quantity || 0,
+        quantityInRolls: item?.quantityInRolls || 0,
+        unit: item?.unit || 'rulon',
+        unitPrice: item?.unitPrice || 0,
+        discount: item?.discount || 0,
+        subtotal: item?.subtotal || 0,
+        paymentType: o.paymentType,
+        status: o.status,
+        returnedQuantity: item?.returnedQuantity || 0,
+      };
+    });
+
+    // Map returns to unified history events
+    const returnEvents = returns.map(r => {
+      const item = r.items.find(i => i.product?.toString() === productId);
+      return {
+        type: 'return',
+        id: r._id,
+        date: r.createdAt,
+        returnNumber: r.returnNumber,
+        customer: r.customer,
+        warehouse: r.warehouse,
+        order: r.order,
+        quantity: item?.quantity || 0,
+        quantityInRolls: item?.quantityInRolls || 0,
+        unit: item?.unit || 'rulon',
+        refundAmount: item?.refundAmount || 0,
+        reason: r.reason,
+        processedBy: r.processedBy,
+      };
+    });
+
+    // Map transfers to unified history events
+    const transferEvents = transfers.map(t => {
+      const item = t.items.find(i => i.product?.toString() === productId);
+      return {
+        type: 'transfer',
+        id: t._id,
+        date: t.createdAt,
+        transferNumber: t.transferNumber,
+        fromWarehouse: t.fromWarehouse,
+        toWarehouse: t.toWarehouse,
+        quantity: item?.quantity || 0,
+        unit: item?.unit || 'rulon',
+        status: t.status,
+        transferType: t.type,
+        sentBy: t.sentBy,
+      };
+    });
+
+    // Merge and sort by date descending
+    const history = [...orderEvents, ...returnEvents, ...transferEvents]
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Summary stats
+    const totalSold = orderEvents.reduce((sum, e) => sum + (e.quantityInRolls || 0), 0);
+    const totalReturned = returnEvents.reduce((sum, e) => sum + (e.quantityInRolls || 0), 0);
+    const totalTransferred = transferEvents.reduce((sum, e) => sum + (e.quantity || 0), 0);
+    const totalRevenue = orderEvents.reduce((sum, e) => sum + (e.subtotal || 0), 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        product: {
+          _id: product._id,
+          artikul: product.artikul,
+          brand: product.brand,
+          collection: product.collection,
+          quantity: product.quantity,
+          soldQuantity: product.soldQuantity,
+          unit: product.unit,
+          pricePerRoll: product.pricePerRoll,
+          costPrice: product.costPrice,
+          warehouse: product.warehouse,
+          images: product.images,
+        },
+        summary: {
+          totalOrders: orderEvents.length,
+          totalSoldRolls: totalSold,
+          totalReturnedRolls: totalReturned,
+          totalTransferred,
+          totalRevenue,
+          netSoldRolls: totalSold - totalReturned,
+        },
+        history,
+      }
+    });
+  } catch (error) {
+    console.error('Product history error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

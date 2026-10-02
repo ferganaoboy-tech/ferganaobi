@@ -13,7 +13,8 @@ const {
   getCompareProducts,
   getReplenishmentRecommendations,
   parseOrder,
-  exportProductsExcel
+  exportProductsExcel,
+  getProductHistory
 } = require('../controllers/productController');
 
 router.post('/parse-order', parseOrder);
@@ -26,6 +27,8 @@ router.get('/export-excel', authorizeWithPermission('manage_products'), exportPr
 router.route('/')
   .get(getProducts)
   .post(authorizeWithPermission('manage_products'), upload.array('images', 8), createProduct);
+
+router.get('/:id/history', getProductHistory);
 
 router.route('/:id')
   .get(getProduct)

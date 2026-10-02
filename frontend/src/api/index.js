@@ -139,6 +139,7 @@ export const fetchProducts    = (params) => api.get('/products', { params }).the
 export const compareProducts  = (artikul, brand) => api.get('/products/compare', { params: { artikul, brand } }).then(extractData);
 export const getReplenishmentRecommendations = (warehouseId) => api.get('/products/replenishment', { params: { warehouseId } }).then(extractData);
 export const fetchProduct     = (id)     => api.get(`/products/${id}`).then(extractData);
+export const fetchProductHistory = (id)  => api.get(`/products/${id}/history`).then(extractData);
 export const createProduct    = (formData) => api.post('/products', formData, {
   headers: { 'Content-Type': 'multipart/form-data' },
 }).then(extractData);

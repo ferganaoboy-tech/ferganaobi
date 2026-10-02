@@ -24,7 +24,8 @@ const ProductTableMobileRow = React.forwardRef(({
   openEditModal,
   handleDelete,
   clearSearch,
-  openCompareModal
+  openCompareModal,
+  openHistoryDrawer
 }, ref) => {
   const { formatPrice, isUsd } = useCurrency();
   const mobileUnit = cartUnits[product._id] || product.unit || 'rulon';
@@ -96,8 +97,14 @@ const ProductTableMobileRow = React.forwardRef(({
         <div className="flex flex-1 items-center justify-between min-w-0 gap-2">
           {/* Left: Artikul & Brand */}
           <div className="flex flex-col min-w-0">
-             <div className="flex items-center gap-2 mb-1.5">
-               <div className="text-[17px] font-[700] text-primary leading-none truncate">{product.artikul}</div>
+               <div className="flex items-center gap-2 mb-1.5">
+               <button
+                  onClick={(e) => { e.stopPropagation(); openHistoryDrawer && openHistoryDrawer(product._id); }}
+                  className="text-[17px] font-[700] text-primary leading-none truncate hover:text-accent hover:underline underline-offset-2 transition-colors cursor-pointer text-left"
+                  title="Tarixni ko'rish"
+                >
+                  {product.artikul}
+                </button>
                <button 
                   onClick={(e) => { e.stopPropagation(); openCompareModal(product); }}
                   className="w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-100 hover:text-blue-700 active:scale-95 transition-all shrink-0"

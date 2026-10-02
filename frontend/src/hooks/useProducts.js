@@ -34,6 +34,15 @@ export const useProduct = (id) => {
   });
 };
 
+export const useProductHistory = (id) => {
+  return useQuery({
+    queryKey: ['product-history', id],
+    queryFn: () => api.fetchProductHistory(id),
+    enabled: !!id,
+    staleTime: 30_000, // 30 soniya — tarix tez-tez o'zgarmasligi mumkin
+  });
+};
+
 export const useCompareProducts = (artikul, brand) => {
   return useQuery({
     queryKey: ['compare-products', artikul, brand],
