@@ -111,9 +111,9 @@ function HistoryItem({ event, formatPrice }) {
         </div>
 
         {expanded ? (
-          <ChevronUp className="w-4 h-4 text-tertiary shrink-0" />
+          <ChevronUp className="w-4 h-4 text-secondary shrink-0" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-tertiary shrink-0" />
+          <ChevronDown className="w-4 h-4 text-secondary shrink-0" />
         )}
       </button>
 
@@ -257,7 +257,7 @@ export default function ProductHistoryDrawer({ productId, onClose }) {
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-background shadow-2xl z-50 flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-surface shadow-2xl z-50 flex flex-col">
         
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-subtle shrink-0">
@@ -265,13 +265,13 @@ export default function ProductHistoryDrawer({ productId, onClose }) {
             <div className="text-[17px] font-[800] text-primary truncate">
               {product?.artikul || '...'}
             </div>
-            <div className="text-[12px] text-tertiary font-[500] uppercase tracking-wider">
+            <div className="text-[12px] text-secondary font-[600] uppercase opacity-80 tracking-wider">
               {product?.brand || ''}{product?.collection ? ` · ${product.collection}` : ''}
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-subtle flex items-center justify-center text-tertiary hover:text-primary transition-colors shrink-0"
+            className="w-8 h-8 rounded-full bg-surface border border-subtle flex items-center justify-center text-secondary hover:text-primary hover:bg-raised transition-all active:scale-95 shrink-0"
           >
             <X className="w-4.5 h-4.5" />
           </button>
@@ -374,3 +374,5 @@ export default function ProductHistoryDrawer({ productId, onClose }) {
     </>
   );
 }
+
+

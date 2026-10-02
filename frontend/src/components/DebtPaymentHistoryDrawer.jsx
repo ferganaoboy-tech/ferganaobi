@@ -188,7 +188,7 @@ export default function DebtPaymentHistoryDrawer({ debtor, onClose }) {
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-[440px] bg-background shadow-2xl z-50 flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-[440px] bg-surface shadow-2xl z-50 flex flex-col">
 
         {/* ── Header ── */}
         <div className="px-5 py-4 border-b border-subtle shrink-0">
@@ -208,7 +208,7 @@ export default function DebtPaymentHistoryDrawer({ debtor, onClose }) {
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full hover:bg-subtle flex items-center justify-center text-tertiary hover:text-primary transition-colors shrink-0 mt-0.5"
+              className="w-8 h-8 rounded-full bg-surface border border-subtle flex items-center justify-center text-secondary hover:text-primary hover:bg-raised transition-all active:scale-95 shrink-0 mt-0.5"
             >
               <X className="w-4.5 h-4.5" />
             </button>
@@ -414,3 +414,4 @@ export default function DebtPaymentHistoryDrawer({ debtor, onClose }) {
     </>
   );
 }
+
