@@ -173,8 +173,10 @@ export const cancelOrder      = (id)     => api.put(`/orders/${id}/cancel`).then
 export const sendOrderReceiptToTelegram = (id, imageBase64) => api.post(`/orders/${id}/send-receipt`, { imageBase64 }).then(extractData);
 
 // ─── Payments API ─────────────────────────────────────────────────────────────
-export const fetchPayments    = (params) => api.get('/payments', { params }).then(extractData);
-export const createPayment    = (data)   => api.post('/payments', data).then(extractData);
+export const fetchPayments           = (params) => api.get('/payments', { params }).then(extractData);
+export const fetchCustomerPayments   = (customerId, params) =>
+  api.get('/payments', { params: { customer: customerId, limit: 100, ...params } }).then(extractData);
+export const createPayment           = (data)   => api.post('/payments', data).then(extractData);
 
 // ─── Returns API ──────────────────────────────────────────────────────────────
 export const fetchReturns     = (params) => api.get('/returns', { params }).then(extractData);

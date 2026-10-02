@@ -1,8 +1,9 @@
-﻿const Product = require('../models/Product');
+const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const { logAction } = require('../utils/logger');
 const Order = require('../models/Order');
 
+const Transfer = require('../models/Transfer');
 const Return = require('../models/Return');
 
 const { cloudinary } = require('../middleware/upload');
@@ -29,7 +30,7 @@ exports.getProducts = async (req, res) => {
     if (category && typeof category === 'string') query.category = category;
     if (polka && typeof polka === 'string') query.polka = { $regex: polka, $options: 'i' };
     if (lowStock === 'true') {
-      // ✅ FIX: $expr ni to'g'ridan-to'g'ri o'rniga $and array bilan birlashtirish
+      // ? FIX: $expr ni to'g'ridan-to'g'ri o'rniga $and array bilan birlashtirish
       // Agar keyinchalik deadStock ham qo'shilsa, $and ga push qilinadi
       const lowStockExpr = { $lte: ['$quantity', { $ifNull: ['$minStock', 4] }] };
       if (query.$expr) {
@@ -41,7 +42,7 @@ exports.getProducts = async (req, res) => {
     if (req.query.deadStock === 'true') {
       query.soldQuantity = { $in: [0, null] };
       const deadStockExpr = { $gt: ['$quantity', { $ifNull: ['$minStock', 4] }] };
-      // ✅ FIX: Mavjud $expr bilan $and orqali birlashtiramiz (overwrite emas)
+      // ? FIX: Mavjud $expr bilan $and orqali birlashtiramiz (overwrite emas)
       if (query.$expr) {
         query.$expr = { $and: [query.$expr, deadStockExpr] };
       } else {
@@ -328,7 +329,7 @@ exports.getFilters = async (req, res) => {
 // @access  Public (protect middleware bor)
 exports.getDashboardStats = async (req, res) => {
   try {
-    // ─── 1. Warehouse bo'yicha aggregation (barcha produktni xotiraga yuklamasdan) ──
+    // --- 1. Warehouse bo'yicha aggregation (barcha produktni xotiraga yuklamasdan) --
     const warehouseAgg = await Product.aggregate([
       { $match: { isActive: true } },
       {
@@ -394,7 +395,7 @@ exports.getDashboardStats = async (req, res) => {
       }))
     );
 
-    // ─── 2. Transfer statistikasi — aggregation bilan (JS filter yo'q) ─────
+    // --- 2. Transfer statistikasi � aggregation bilan (JS filter yo'q) -----
     const transferAgg = await Transfer.aggregate([
       { $match: { status: { $in: ['pending', 'completed'] } } },
       { $unwind: '$items' },
@@ -424,8 +425,8 @@ exports.getDashboardStats = async (req, res) => {
     ]);
 
     // Transfer statlarini warehouse ga bog'lash
-    const pendingIn  = {};  // toWarehouse → qty
-    const pendingOut = {};  // fromWarehouse → qty
+    const pendingIn  = {};  // toWarehouse ? qty
+    const pendingOut = {};  // fromWarehouse ? qty
     const doneIn     = {};
     const doneOut    = {};
 
@@ -452,7 +453,7 @@ exports.getDashboardStats = async (req, res) => {
       };
     });
 
-    // ─── 3. Top 10 mahsulot — aggregation (sort + limit DB da) ─────────────
+    // --- 3. Top 10 mahsulot � aggregation (sort + limit DB da) -------------
     const topProducts = await Product.aggregate([
       { $match: { isActive: true } },
       {
@@ -468,7 +469,7 @@ exports.getDashboardStats = async (req, res) => {
       { $limit: 10 }
     ]);
 
-    // ─── 4. Joriy oy savdolari ────────────────────────────────────────────
+    // --- 4. Joriy oy savdolari --------------------------------------------
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -503,7 +504,7 @@ exports.getDashboardStats = async (req, res) => {
         warehouseStats,
         lowStockItems: lowStockItems.map(p => ({
           _id:       p._id,
-          name:      p.brand ? `${p.brand} — ${p.artikul}` : p.artikul,
+          name:      p.brand ? `${p.brand} � ${p.artikul}` : p.artikul,
           brand:     p.brand,
           artikul:   p.artikul,
           quantity:  p.quantity,
@@ -1077,3 +1078,4 @@ exports.getProductHistory = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+

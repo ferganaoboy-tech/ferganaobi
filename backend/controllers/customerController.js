@@ -184,42 +184,91 @@ exports.deleteCustomer = async (req, res) => {
 // @access  Public
 exports.getDebtors = async (req, res) => {
   try {
+    const Payment = require('../models/Payment');
+
     const debtors = await Customer.find({ isActive: true, totalDebt: { $gt: 0 } })
       .sort({ totalDebt: -1 })
-      .lean(); // Add lean() for performance
+      .lean();
 
     const debtorIds = debtors.map(c => c._id);
 
-    // Optimize N+1 Query Problem using a single Order aggregation for debtors
-    const orderStats = await Order.aggregate([
-      { $match: { customer: { $in: debtorIds } } },
-      { $group: {
-          _id: '$customer',
-          lastOrderDate: { $max: '$createdAt' },
-          unpaidOrdersCount: {
-            $sum: {
-              $cond: [
-                { $and: [
-                  { $gt: ['$debtAmount', 0] },
-                  { $ne: ['$status', 'cancelled'] }
-                ]}, 1, 0
-              ]
+    // ✅ Parallel aggregation — Order stats + Payment stats bir vaqtda bajariladi
+    const [orderStats, paymentStats] = await Promise.all([
+      // 1. Order stats (unpaid orders count, last order date)
+      Order.aggregate([
+        { $match: { customer: { $in: debtorIds } } },
+        {
+          $group: {
+            _id: '$customer',
+            lastOrderDate: { $max: '$createdAt' },
+            unpaidOrdersCount: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $gt: ['$debtAmount', 0] },
+                      { $ne: ['$status', 'cancelled'] }
+                    ]
+                  }, 1, 0
+                ]
+              }
             }
           }
         }
-      }
+      ]),
+
+      // 2. Payment stats — har bir debtor uchun to'lov tarixi xulasasi
+      Payment.aggregate([
+        { $match: { customer: { $in: debtorIds } } },
+        {
+          $sort: { createdAt: -1 } // So'nggi to'lov birinchi
+        },
+        {
+          $group: {
+            _id: '$customer',
+            totalPaid:         { $sum: '$amount' },
+            paymentCount:      { $sum: 1 },
+            lastPaymentDate:   { $max: '$createdAt' },
+            lastPaymentAmount: { $first: '$amount' },   // $sort -1 bo'lgani uchun $first = eng so'nggi
+            lastPaymentMethod: { $first: '$method' }
+          }
+        }
+      ])
     ]);
 
-    const statsMap = {};
-    orderStats.forEach(stat => {
-      statsMap[stat._id.toString()] = stat;
-    });
+    // Maps for O(1) lookup
+    const orderMap = {};
+    orderStats.forEach(s => { orderMap[s._id.toString()] = s; });
 
-    const debtorsWithStats = debtors.map(c => ({
-      ...c,
-      lastOrderDate: statsMap[c._id.toString()]?.lastOrderDate || null,
-      unpaidOrdersCount: statsMap[c._id.toString()]?.unpaidOrdersCount || 0
-    }));
+    const payMap = {};
+    paymentStats.forEach(s => { payMap[s._id.toString()] = s; });
+
+    const debtorsWithStats = debtors.map(c => {
+      const id = c._id.toString();
+      const totalPaid    = payMap[id]?.totalPaid    || 0;
+      const currentDebt  = c.totalDebt;
+      // Dastlabki nasiya = hozir to'langan + hozir qolgan qarz
+      const originalDebt = totalPaid + currentDebt;
+      // To'langan foiz (0–100), 0 dan qo'riqlanadi
+      const paidPercent  = originalDebt > 0
+        ? Math.min(100, Math.round((totalPaid / originalDebt) * 100))
+        : 0;
+
+      return {
+        ...c,
+        // Order stats
+        lastOrderDate:      orderMap[id]?.lastOrderDate      || null,
+        unpaidOrdersCount:  orderMap[id]?.unpaidOrdersCount  || 0,
+        // Payment stats
+        totalPaid,
+        originalDebt,
+        paidPercent,
+        paymentCount:       payMap[id]?.paymentCount         || 0,
+        lastPaymentDate:    payMap[id]?.lastPaymentDate       || null,
+        lastPaymentAmount:  payMap[id]?.lastPaymentAmount     || 0,
+        lastPaymentMethod:  payMap[id]?.lastPaymentMethod     || null,
+      };
+    });
 
     res.status(200).json({ success: true, data: debtorsWithStats });
   } catch (error) {

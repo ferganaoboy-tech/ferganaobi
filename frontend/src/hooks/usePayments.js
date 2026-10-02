@@ -11,15 +11,24 @@ export const usePayments = (filters) => {
   });
 };
 
+// Bitta mijozning to'lov tarixini olish (DebtPage drawer uchun)
+export const useCustomerPaymentHistory = (customerId) => {
+  return useQuery({
+    queryKey: ['customer-payments', customerId],
+    queryFn: () => api.fetchCustomerPayments(customerId),
+    enabled: !!customerId,
+    staleTime: 30_000, // 30s — to'lov qilinmasa tez-tez o'zgarmaydi
+  });
+};
+
 export const useCreatePayment = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: api.createPayment,
     onSuccess: () => {
       playNotificationSound();
-      // toast is handled in socket listener usually, but we can have it here too
-      // toast.success("To'lov qabul qilindi"); 
       queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-payments'] }); // Drawer yangilansin
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orderStats'] });
