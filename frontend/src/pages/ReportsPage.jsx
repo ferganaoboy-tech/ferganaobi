@@ -237,7 +237,7 @@ const ReportsPage = () => {
   // Auto-fetch capital when tab becomes active
   useEffect(() => {
     if (activeTab === 'capital' && !capitalData) fetchCapital();
-  }, [activeTab]);
+  }, [activeTab, fetchCapital]);
 
   const handleCapitalExport = async () => {
     setCapitalExporting(true);

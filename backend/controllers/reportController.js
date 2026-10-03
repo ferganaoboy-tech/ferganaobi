@@ -495,7 +495,7 @@ exports.getCapitalReport = async (req, res) => {
           pipeline: [{ $project: { name: 1, color: 1 } }]
         }
       },
-      { $unwind: { path: '$warehouseInfo', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$warehouseInfo', preserveNullAndEmptyArrays: true } },
 
       // Qaytarish kerak bo'lgan maydonlarni tanlash
       {
@@ -632,7 +632,12 @@ exports.exportCapitalExcel = async (req, res) => {
           pipeline: [{ $project: { name: 1 } }]
         }
       },
-      { $unwind: { path: '$warehouseInfo', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$warehouseInfo', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          warehouseName: '$warehouseInfo.name'
+        }
+      },
       { $sort: { investedAmount: -1 } }
     ]);
 
@@ -725,7 +730,7 @@ exports.exportCapitalExcel = async (req, res) => {
 
       const vals = [
         idx + 1, p.brand || '-', p.artikul || '-', p.collection || '-', p.polka || '-',
-        p.warehouseInfo?.[0]?.name || p.warehouseName || '-',
+        p.warehouseName || '-',
         p.costPrice || 0, p.quantity || 0, p.investedAmount || 0,
         p.pricePerRoll || 0, p.potentialRevenue || 0, p.potentialProfit || 0,
         parseFloat((p.marginPercent || 0).toFixed(1))
