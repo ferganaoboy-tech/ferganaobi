@@ -88,29 +88,45 @@ exports.processOrder = async (orderDataInput, user, io) => {
     const isPrivilegedRole = user && ['superadmin', 'admin'].includes(user.role);
 
     if (!isPrivilegedRole && product.costPrice) {
-      // USD rejimida ham tekshirish: agar item.unitPrice juda kichik bo'lsa
-      // (masalan, dollar qiymati so'm sifatida kelgan bo'lsa) — aniqlaymiz
-      const looksLikeUsdValue = effectiveUnitPrice < 1000 && product.costPrice > 1000;
-      if (looksLikeUsdValue) {
-        // USD qiymati so'm sifatida yuborilgan — bu frontend bug
-        // usdRate settings'dan olindi (yuqorida)
-        const usdRate = settings?.usdExchangeRate || 12500;
+      const usdRate = settings?.usdExchangeRate || 12500;
+      
+      let isValid = true;
+      let minUsd = 0;
+      let minUzs = 0;
+
+      // Agar UZS da zarar bo'lsa
+      if (effectiveUnitPrice < (product.costPrice - PRICE_TOLERANCE)) {
+        isValid = false;
+        minUzs = product.costPrice;
+        
+        // Lekin agar USD da foyda bo'lsa (kurs tushib ketgan holat uchun)
+        if (product.costPriceUsd) {
+          const priceInUsd = effectiveUnitPrice / usdRate;
+          if (priceInUsd >= (product.costPriceUsd - 0.01)) {
+            isValid = true; // USD hisobida foyda qilyapti, ruxsat beramiz!
+          } else {
+            minUsd = product.costPriceUsd;
+          }
+        }
+      }
+
+      // Agar kiritilgan narx haqiqatan ham dollar ko'rinishida yuborilgan bo'lsa (frontend xatosi)
+      if (effectiveUnitPrice < 1000 && product.costPrice > 1000) {
         const convertedPrice = effectiveUnitPrice * usdRate;
         if (convertedPrice < (product.costPrice - PRICE_TOLERANCE)) {
-          const minUsd = (product.costPrice / usdRate).toFixed(2);
-          throw new Error(
-            `"${product.brand || product.artikul}" mahsuloti tan narxidan arzon sotilmoqda! ` +
-            `Minimal ruxsat etilgan narx: $${minUsd} (${product.costPrice.toLocaleString()} so'm). ` +
-            `Kiritilgan narx: $${effectiveUnitPrice.toFixed(2)}.`
-          );
+          isValid = false;
+          minUsd = (product.costPrice / usdRate).toFixed(2);
+          minUzs = product.costPrice;
+        } else {
+          isValid = true;
         }
-      } else if (effectiveUnitPrice < (product.costPrice - PRICE_TOLERANCE)) {
-        // Standart tekshiruv: so'm vs so'm
-        const minPrice = product.costPrice.toLocaleString('ru-RU');
+      }
+
+      if (!isValid) {
         throw new Error(
-          `"${product.brand || product.artikul}" mahsulotini tan narxidan arzon sota olmaysiz! ` +
-          `Minimal ruxsat etilgan narx: ${minPrice} so'm. ` +
-          `Kiritilgan narx: ${Math.round(effectiveUnitPrice).toLocaleString('ru-RU')} so'm.`
+          `"${product.brand || product.artikul}" mahsuloti tan narxidan arzon sotilmoqda! ` +
+          (minUsd ? `Minimal ruxsat etilgan narx: $${minUsd} ` : `Minimal ruxsat etilgan narx: ${minUzs.toLocaleString('ru-RU')} so'm `) +
+          `(Kiritilgan narx juda past).`
         );
       }
     }
