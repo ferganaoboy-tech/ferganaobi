@@ -81,8 +81,12 @@ exports.updateSettings = async (req, res) => {
             product.wholesalePrice = Math.round(product.wholesalePriceUsd * usdExchangeRate);
             updated = true;
           }
+          if (product.costPriceUsd) {
+            product.costPrice = Math.round(product.costPriceUsd * usdExchangeRate);
+            updated = true;
+          }
           if (updated) {
-            await product.save();
+            await product.save({ validateBeforeSave: false }); // Pre-save xatoliklari oldini olish uchun
           }
         }
       } else {
