@@ -150,7 +150,7 @@ const ReportsPage = () => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [preset, setPreset] = useState('last30');
   
-  // Tabs: main, products, customers, trends
+  // Tabs: main, products, customers, trends, capital
   const [activeTab, setActiveTab] = useState('main'); 
   const abortRef = useRef(null);
 
@@ -159,6 +159,14 @@ const ReportsPage = () => {
   const [currentPage, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('revenue');
   const [sortDir, setSortDir] = useState('desc');
+
+  // ── Capital Report State ──────────────────────────────────────────────────
+  const [capitalData, setCapitalData] = useState(null);
+  const [capitalLoading, setCapitalLoading] = useState(false);
+  const [capitalExporting, setCapitalExporting] = useState(false);
+  const [capitalArticul, setCapitalArticul] = useState('');
+  const [capitalPage, setCapitalPage] = useState(1);
+  const capitalAbortRef = useRef(null);
 
   useEffect(() => {
     if (preset === 'custom') return;
@@ -208,6 +216,50 @@ const ReportsPage = () => {
   const kpi = data?.kpi || {};
   const allProducts = data?.products || [];
 
+  // ── Capital fetch & export ────────────────────────────────────────────────
+  const fetchCapital = useCallback(async (artikulFilter) => {
+    if (capitalAbortRef.current) capitalAbortRef.current.abort();
+    const controller = new AbortController();
+    capitalAbortRef.current = controller;
+    setCapitalLoading(true);
+    try {
+      const params = {};
+      if (artikulFilter !== undefined ? artikulFilter : capitalArticul)
+        params.artikul = artikulFilter !== undefined ? artikulFilter : capitalArticul;
+      const res = await api.get('/reports/capital', { params, signal: controller.signal });
+      if (res.data.success) { setCapitalData(res.data.data); setCapitalPage(1); }
+      else toast.error(res.data.message || 'Xatolik');
+    } catch (err) {
+      if (err.name !== 'CanceledError' && err.name !== 'AbortError') toast.error('Kapital yuklab bo\'lmadi');
+    } finally { setCapitalLoading(false); }
+  }, [capitalArticul]);
+
+  // Auto-fetch capital when tab becomes active
+  useEffect(() => {
+    if (activeTab === 'capital' && !capitalData) fetchCapital();
+  }, [activeTab]);
+
+  const handleCapitalExport = async () => {
+    setCapitalExporting(true);
+    try {
+      const params = {};
+      if (capitalArticul) params.artikul = capitalArticul;
+      const res = await api.get('/reports/capital/export-excel', { params, responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url; a.download = `OBOI_Kapital_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      toast.success('Kapital Excel yuklab olindi!');
+    } catch { toast.error('Export xatolik'); }
+    finally { setCapitalExporting(false); }
+  };
+
+  const CAPITAL_PER_PAGE = 15;
+  const capitalProducts  = capitalData?.products || [];
+  const capitalTotalPages = Math.ceil(capitalProducts.length / CAPITAL_PER_PAGE);
+  const capitalPageItems  = capitalProducts.slice((capitalPage - 1) * CAPITAL_PER_PAGE, capitalPage * CAPITAL_PER_PAGE);
+  const capitalSummary    = capitalData?.summary || {};
+
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase();
     const list = allProducts.filter(p => !q || `${p.name} ${p.artikul} ${p.brand}`.toLowerCase().includes(q));
@@ -222,6 +274,7 @@ const ReportsPage = () => {
     { id: 'products', icon: Package, label: 'Mahsulotlar (ABC)' },
     { id: 'customers', icon: Users, label: 'Mijozlar' },
     { id: 'trends', icon: CalendarDays, label: 'Trendlar' },
+    { id: 'capital', icon: Banknote, label: 'Tikilgan Kapital' },
   ];
 
   return (
@@ -511,6 +564,175 @@ const ReportsPage = () => {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* TAB: CAPITAL — Tikilgan Kapital */}
+        {activeTab === 'capital' && (
+          <div className="space-y-6 animate-fade-in">
+
+            {/* Header with search + refresh + export */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-[18px] font-[800] text-[var(--text-primary)]">💰 Tikilgan Kapital Hisoboti</h2>
+                <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">Har bir mahsulotga tikilgan pul = Tan narxi × Miqdor</p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Artikul search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                  <input
+                    type="text"
+                    placeholder="Artikul bo'yicha filter..."
+                    value={capitalArticul}
+                    onChange={e => setCapitalArticul(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && fetchCapital()}
+                    className="pl-9 pr-4 h-[38px] rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-[13px] font-[500] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)] w-[200px]"
+                  />
+                </div>
+                <button
+                  onClick={() => fetchCapital()}
+                  disabled={capitalLoading}
+                  className="h-[38px] px-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-[13px] font-[600] flex items-center gap-2 hover:bg-[var(--bg-raised)] transition-all"
+                >
+                  <RefreshCw className={`w-4 h-4 ${capitalLoading ? 'animate-spin' : ''}`} />
+                  Yangilash
+                </button>
+                <button
+                  onClick={handleCapitalExport}
+                  disabled={capitalExporting || capitalLoading || capitalProducts.length === 0}
+                  className="h-[38px] px-4 rounded-xl bg-emerald-600 text-white text-[13px] font-[600] flex items-center gap-2 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  {capitalExporting ? '...' : 'Excel'}
+                </button>
+              </div>
+            </div>
+
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-rose-50 dark:bg-rose-900/10 rounded-2xl p-5 border border-rose-200 dark:border-rose-800/30">
+                <p className="text-[11px] font-[700] text-rose-500 uppercase tracking-wider mb-2">Jami Tikilgan Pul</p>
+                <p className="text-[22px] font-[800] text-rose-600 leading-tight">
+                  {capitalLoading ? '...' : fmtCompact(capitalSummary.totalInvested || 0)}
+                </p>
+                <p className="text-[11px] text-rose-400 mt-1">{capitalSummary.totalItems || 0} xil mahsulot</p>
+              </div>
+              <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl p-5 border border-emerald-200 dark:border-emerald-800/30">
+                <p className="text-[11px] font-[700] text-emerald-600 uppercase tracking-wider mb-2">Potentsial Tushum</p>
+                <p className="text-[22px] font-[800] text-emerald-600 leading-tight">
+                  {capitalLoading ? '...' : fmtCompact(capitalSummary.totalPotentialRevenue || 0)}
+                </p>
+                <p className="text-[11px] text-emerald-400 mt-1">{capitalSummary.totalQuantity || 0} ta mahsulot</p>
+              </div>
+              <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl p-5 border border-indigo-200 dark:border-indigo-800/30">
+                <p className="text-[11px] font-[700] text-indigo-600 uppercase tracking-wider mb-2">Potentsial Foyda</p>
+                <p className="text-[22px] font-[800] text-indigo-600 leading-tight">
+                  {capitalLoading ? '...' : fmtCompact(capitalSummary.totalPotentialProfit || 0)}
+                </p>
+                <p className="text-[11px] text-indigo-400 mt-1">Sotilsa keladigan foyda</p>
+              </div>
+              <div className="bg-amber-50 dark:bg-amber-900/10 rounded-2xl p-5 border border-amber-200 dark:border-amber-800/30">
+                <p className="text-[11px] font-[700] text-amber-600 uppercase tracking-wider mb-2">O'rtacha Margin</p>
+                <p className="text-[22px] font-[800] text-amber-600 leading-tight">
+                  {capitalLoading ? '...' : `${capitalSummary.avgMarginPercent || 0}%`}
+                </p>
+                <p className="text-[11px] text-amber-400 mt-1">Umumiy marja</p>
+              </div>
+            </div>
+
+            {/* Warehouse Breakdown */}
+            {!capitalLoading && capitalData?.byWarehouse?.length > 0 && (
+              <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border-subtle)] p-5">
+                <h3 className="text-[14px] font-[700] text-[var(--text-primary)] mb-3">Sklad Bo'yicha Kapital</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {capitalData.byWarehouse.map(wh => (
+                    <div key={wh.name} className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
+                      <div>
+                        <p className="text-[13px] font-[700] text-[var(--text-primary)]">{wh.name}</p>
+                        <p className="text-[11px] text-[var(--text-tertiary)]">{wh.items} xil · {wh.quantity} ta</p>
+                      </div>
+                      <p className="text-[14px] font-[800] text-rose-500">{fmtCompact(wh.invested)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Products Table */}
+            <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border-subtle)] shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[900px]">
+                  <thead>
+                    <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-subtle)]">
+                      <th className="px-4 py-3 text-[11px] font-[700] text-[var(--text-tertiary)] uppercase w-8">#</th>
+                      <th className="px-4 py-3 text-[11px] font-[700] text-[var(--text-tertiary)] uppercase">Mahsulot</th>
+                      <th className="px-4 py-3 text-[11px] font-[700] text-[var(--text-tertiary)] uppercase text-center">Dona</th>
+                      <th className="px-4 py-3 text-[11px] font-[700] text-[var(--text-tertiary)] uppercase text-right">Tan Narxi</th>
+                      <th className="px-4 py-3 text-[11px] font-[700] text-[var(--text-tertiary)] uppercase text-right bg-rose-50 dark:bg-rose-900/10">💰 Tikilgan Pul</th>
+                      <th className="px-4 py-3 text-[11px] font-[700] text-[var(--text-tertiary)] uppercase text-right">Sot. Narxi</th>
+                      <th className="px-4 py-3 text-[11px] font-[700] text-[var(--text-tertiary)] uppercase text-right">Pot. Tushum</th>
+                      <th className="px-4 py-3 text-[11px] font-[700] text-[var(--text-tertiary)] uppercase text-right">Pot. Foyda</th>
+                      <th className="px-4 py-3 text-[11px] font-[700] text-[var(--text-tertiary)] uppercase text-center">Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border-subtle)]">
+                    {capitalLoading
+                      ? [...Array(8)].map((_, i) => (
+                          <tr key={i}><td colSpan={9} className="p-4"><div className="h-4 bg-[var(--bg-subtle)] rounded animate-pulse w-full" /></td></tr>
+                        ))
+                      : capitalPageItems.length === 0
+                        ? <tr><td colSpan={9} className="py-16 text-center text-[13px] text-[var(--text-tertiary)]">Mahsulot topilmadi</td></tr>
+                        : capitalPageItems.map((p, idx) => {
+                            const margin = p.marginPercent || 0;
+                            const marginCls = margin >= 30 ? 'text-emerald-500' : margin >= 15 ? 'text-amber-500' : 'text-rose-500';
+                            return (
+                              <tr key={p._id} className="hover:bg-[var(--bg-subtle)] transition-colors">
+                                <td className="px-4 py-3 text-[12px] font-[600] text-[var(--text-tertiary)]">
+                                  {(capitalPage - 1) * CAPITAL_PER_PAGE + idx + 1}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <p className="text-[13px] font-[700] text-[var(--text-primary)] leading-tight">
+                                    {p.brand} {p.collection}
+                                  </p>
+                                  <p className="text-[11px] font-[500] text-[var(--text-secondary)]">{p.artikul} · {p.warehouseName}</p>
+                                </td>
+                                <td className="px-4 py-3 text-[13px] font-[600] text-[var(--text-secondary)] text-center">{p.quantity}</td>
+                                <td className="px-4 py-3 text-[12px] font-[600] text-[var(--text-secondary)] text-right">{fmt(p.costPrice)}</td>
+                                <td className="px-4 py-3 text-[14px] font-[800] text-rose-500 text-right bg-rose-50/50 dark:bg-rose-900/5">{fmt(p.investedAmount)}</td>
+                                <td className="px-4 py-3 text-[12px] font-[600] text-[var(--text-secondary)] text-right">{fmt(p.pricePerRoll)}</td>
+                                <td className="px-4 py-3 text-[13px] font-[700] text-emerald-500 text-right">{fmt(p.potentialRevenue)}</td>
+                                <td className="px-4 py-3 text-[13px] font-[700] text-indigo-500 text-right">{fmt(p.potentialProfit)}</td>
+                                <td className={`px-4 py-3 text-[13px] font-[800] text-center ${marginCls}`}>{margin.toFixed(1)}%</td>
+                              </tr>
+                            );
+                          })
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals footer */}
+              {!capitalLoading && capitalProducts.length > 0 && (
+                <div className="px-4 py-3 bg-[var(--bg-subtle)] border-t border-[var(--border-subtle)] flex flex-wrap gap-6 text-[12px] font-[700]">
+                  <span>Jami: <span className="text-rose-500">{fmt(capitalSummary.totalInvested)}</span></span>
+                  <span>Pot. Tushum: <span className="text-emerald-500">{fmt(capitalSummary.totalPotentialRevenue)}</span></span>
+                  <span>Pot. Foyda: <span className="text-indigo-500">{fmt(capitalSummary.totalPotentialProfit)}</span></span>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {!capitalLoading && capitalTotalPages > 1 && (
+                <div className="p-4 border-t border-[var(--border-subtle)] flex justify-between items-center">
+                  <span className="text-[12px] text-[var(--text-tertiary)]">{capitalProducts.length} ta mahsulot · sahifa {capitalPage}/{capitalTotalPages}</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => setCapitalPage(p => Math.max(1, p - 1))} disabled={capitalPage === 1} className="px-3 py-1 bg-[var(--bg-subtle)] rounded-lg text-[12px] font-[600] disabled:opacity-50">Oldingi</button>
+                    <button onClick={() => setCapitalPage(p => Math.min(capitalTotalPages, p + 1))} disabled={capitalPage === capitalTotalPages} className="px-3 py-1 bg-[var(--bg-subtle)] rounded-lg text-[12px] font-[600] disabled:opacity-50">Keyingi</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 

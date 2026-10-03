@@ -7,4 +7,8 @@ router.post('/send-daily', authorize('superadmin'), reportController.sendManualR
 router.get('/sales', authorize('superadmin', 'admin'), reportController.getSalesReport);
 router.get('/export-excel', authorize('superadmin', 'admin'), reportController.exportSalesExcel);
 
+// ── Tikilgan kapital hisoboti ────────────────────────────────────────────────
+router.get('/capital', authorize('superadmin', 'admin'), reportController.getCapitalReport);
+router.get('/capital/export-excel', authorize('superadmin', 'admin'), reportController.exportCapitalExcel);
+
 module.exports = router;

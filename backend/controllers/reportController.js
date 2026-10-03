@@ -420,6 +420,354 @@ exports.getSalesReport = async (req, res) => {
 // EXPORT EXCEL  — professional, multi-sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET CAPITAL REPORT  — Tikilgan kapital hisoboti (Senior-level)
+// ─────────────────────────────────────────────────────────────────────────────
+// Mantiq:
+//   Har bir mahsulot uchun: tikilganPul = costPrice × quantity
+//   Umumiy tikilgan kapital = Σ(costPrice × quantity)
+//   Artikul bo'yicha filterlash → bitta mahsulotning kapitalini alohida ko'rish
+//
+// GET /api/reports/capital?warehouse=...&artikul=...&category=...
+// ─────────────────────────────────────────────────────────────────────────────
+
+exports.getCapitalReport = async (req, res) => {
+  try {
+    const { warehouse, artikul, category } = req.query;
+
+    // ── Match filter ────────────────────────────────────────────────────────
+    const matchStage = { isActive: true, quantity: { $gt: 0 } };
+
+    // Foydalanuvchi roli: oddiy admin faqat o'z skladini ko'rishi mumkin
+    if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      matchStage.warehouse = req.user.warehouse;
+    } else if (warehouse && warehouse !== 'all') {
+      const mongoose = require('mongoose');
+      matchStage.warehouse = new mongoose.Types.ObjectId(warehouse);
+    }
+
+    if (artikul) {
+      matchStage.artikul = { $regex: artikul.trim(), $options: 'i' };
+    }
+
+    if (category) {
+      matchStage.category = category;
+    }
+
+    // ── MongoDB Aggregation Pipeline ────────────────────────────────────────
+    const pipeline = [
+      { $match: matchStage },
+
+      // Har bir mahsulot uchun tikilgan pul hisoblash
+      {
+        $addFields: {
+          investedAmount:    { $multiply: ['$costPrice',    '$quantity'] }, // UZS
+          investedAmountUsd: { $multiply: [{ $ifNull: ['$costPriceUsd', 0] }, '$quantity'] }, // USD
+          potentialRevenue:  { $multiply: ['$pricePerRoll', '$quantity'] }, // Sotilsa keladigan pul
+          potentialProfit: {
+            $multiply: [
+              { $subtract: ['$pricePerRoll', '$costPrice'] },
+              '$quantity'
+            ]
+          },
+          marginPercent: {
+            $cond: [
+              { $gt: ['$pricePerRoll', 0] },
+              {
+                $multiply: [
+                  { $divide: [{ $subtract: ['$pricePerRoll', '$costPrice'] }, '$pricePerRoll'] },
+                  100
+                ]
+              },
+              0
+            ]
+          }
+        }
+      },
+
+      // Warehouse ma'lumotini ulash
+      {
+        $lookup: {
+          from: 'warehouses',
+          localField: 'warehouse',
+          foreignField: '_id',
+          as: 'warehouseInfo',
+          pipeline: [{ $project: { name: 1, color: 1 } }]
+        }
+      },
+      { $unwind: { path: '$warehouseInfo', preserveNullAndEmpty: true } },
+
+      // Qaytarish kerak bo'lgan maydonlarni tanlash
+      {
+        $project: {
+          _id: 1,
+          brand: 1,
+          artikul: 1,
+          collection: 1,
+          category: 1,
+          unit: 1,
+          polka: 1,
+          costPrice: 1,
+          costPriceUsd: { $ifNull: ['$costPriceUsd', 0] },
+          pricePerRoll: 1,
+          quantity: 1,
+          soldQuantity: 1,
+          minStock: 1,
+          investedAmount: 1,
+          investedAmountUsd: 1,
+          potentialRevenue: 1,
+          potentialProfit: 1,
+          marginPercent: { $round: ['$marginPercent', 1] },
+          warehouseName: '$warehouseInfo.name',
+          warehouseColor: '$warehouseInfo.color',
+          images: { $slice: ['$images', 1] }
+        }
+      },
+
+      // Eng ko'p kapital tikilgandan kamiga saralash
+      { $sort: { investedAmount: -1 } },
+    ];
+
+    const products = await Product.aggregate(pipeline);
+
+    // ── Umumiy KPI hisoblash ─────────────────────────────────────────────────
+    const summary = products.reduce((acc, p) => {
+      acc.totalInvested    += p.investedAmount    || 0;
+      acc.totalInvestedUsd += p.investedAmountUsd || 0;
+      acc.totalPotentialRevenue += p.potentialRevenue || 0;
+      acc.totalPotentialProfit  += p.potentialProfit  || 0;
+      acc.totalItems       += 1;
+      acc.totalQuantity    += p.quantity || 0;
+      return acc;
+    }, {
+      totalInvested: 0,
+      totalInvestedUsd: 0,
+      totalPotentialRevenue: 0,
+      totalPotentialProfit: 0,
+      totalItems: 0,
+      totalQuantity: 0,
+    });
+
+    // Umumiy o'rtacha margin
+    summary.avgMarginPercent = summary.totalPotentialRevenue > 0
+      ? parseFloat(((summary.totalPotentialProfit / summary.totalPotentialRevenue) * 100).toFixed(1))
+      : 0;
+
+    // ── Kategorial breakdown (warehouse bo'yicha guruhlash) ──────────────────
+    const byWarehouse = {};
+    products.forEach(p => {
+      const wName = p.warehouseName || "Noma'lum";
+      if (!byWarehouse[wName]) {
+        byWarehouse[wName] = { name: wName, color: p.warehouseColor, invested: 0, items: 0, quantity: 0 };
+      }
+      byWarehouse[wName].invested  += p.investedAmount || 0;
+      byWarehouse[wName].items     += 1;
+      byWarehouse[wName].quantity  += p.quantity || 0;
+    });
+
+    // ── Category breakdown ───────────────────────────────────────────────────
+    const byCategory = {};
+    products.forEach(p => {
+      const cat = p.category || 'other';
+      if (!byCategory[cat]) byCategory[cat] = { name: cat, invested: 0, items: 0, quantity: 0 };
+      byCategory[cat].invested  += p.investedAmount || 0;
+      byCategory[cat].items     += 1;
+      byCategory[cat].quantity  += p.quantity || 0;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        summary,
+        products,
+        byWarehouse: Object.values(byWarehouse).sort((a, b) => b.invested - a.invested),
+        byCategory:  Object.values(byCategory).sort((a, b) => b.invested - a.invested),
+      }
+    });
+
+  } catch (error) {
+    console.error('getCapitalReport error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPORT CAPITAL EXCEL  — Tikilgan kapital Excel eksport
+// ─────────────────────────────────────────────────────────────────────────────
+
+exports.exportCapitalExcel = async (req, res) => {
+  try {
+    const { warehouse, artikul, category } = req.query;
+
+    const matchStage = { isActive: true, quantity: { $gt: 0 } };
+
+    if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      matchStage.warehouse = req.user.warehouse;
+    } else if (warehouse && warehouse !== 'all') {
+      const mongoose = require('mongoose');
+      matchStage.warehouse = new mongoose.Types.ObjectId(warehouse);
+    }
+    if (artikul)  matchStage.artikul  = { $regex: artikul.trim(), $options: 'i' };
+    if (category) matchStage.category = category;
+
+    const products = await Product.aggregate([
+      { $match: matchStage },
+      {
+        $addFields: {
+          investedAmount:   { $multiply: ['$costPrice',    '$quantity'] },
+          potentialRevenue: { $multiply: ['$pricePerRoll', '$quantity'] },
+          potentialProfit:  { $multiply: [{ $subtract: ['$pricePerRoll', '$costPrice'] }, '$quantity'] },
+          marginPercent: {
+            $cond: [
+              { $gt: ['$pricePerRoll', 0] },
+              { $multiply: [{ $divide: [{ $subtract: ['$pricePerRoll', '$costPrice'] }, '$pricePerRoll'] }, 100] },
+              0
+            ]
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'warehouses', localField: 'warehouse', foreignField: '_id', as: 'warehouseInfo',
+          pipeline: [{ $project: { name: 1 } }]
+        }
+      },
+      { $unwind: { path: '$warehouseInfo', preserveNullAndEmpty: true } },
+      { $sort: { investedAmount: -1 } }
+    ]);
+
+    const totalInvested       = products.reduce((s, p) => s + (p.investedAmount    || 0), 0);
+    const totalPotRevenue     = products.reduce((s, p) => s + (p.potentialRevenue  || 0), 0);
+    const totalPotProfit      = products.reduce((s, p) => s + (p.potentialProfit   || 0), 0);
+
+    // ── Build Excel ──────────────────────────────────────────────────────────
+    const workbook  = new exceljs.Workbook();
+    workbook.creator = 'OBOI CRM — Capital Report';
+    workbook.created = new Date();
+
+    const DARK   = 'FF1F2937';
+    const GREEN  = 'FF059669';
+    const INDIGO = 'FF4F46E5';
+    const AMBER  = 'FFD97706';
+    const WHITE  = 'FFFFFFFF';
+    const LIGHT  = 'FFF9FAFB';
+    const BORDER = 'FFE5E7EB';
+    const RED    = 'FFDC2626';
+
+    const styleCell = (cell, opts = {}) => {
+      if (opts.bold !== undefined) cell.font = { bold: opts.bold, size: opts.size || 11, color: opts.color ? { argb: opts.color } : undefined };
+      if (opts.bg)   cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opts.bg } };
+      if (opts.align) cell.alignment = { horizontal: opts.align, vertical: 'middle', wrapText: false };
+      if (opts.numFmt) cell.numFmt = opts.numFmt;
+      cell.border = { top: { style: 'thin', color: { argb: BORDER } }, left: { style: 'thin', color: { argb: BORDER } }, bottom: { style: 'thin', color: { argb: BORDER } }, right: { style: 'thin', color: { argb: BORDER } } };
+    };
+
+    const sheet = workbook.addWorksheet('💰 Tikilgan Kapital', {
+      properties: { defaultColWidth: 18 },
+      views: [{ state: 'frozen', xSplit: 0, ySplit: 6 }]
+    });
+
+    // Title
+    sheet.mergeCells('A1:J2');
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = '💰  OBOI CRM — Tikilgan Kapital Hisoboti';
+    titleCell.font  = { size: 18, bold: true, color: { argb: WHITE } };
+    titleCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: DARK } };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Period
+    sheet.mergeCells('A3:J3');
+    const subCell = sheet.getCell('A3');
+    subCell.value = `Eksport: ${new Date().toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' })}${artikul ? '  |  Artikul: ' + artikul : ''}${category ? '  |  Kategoriya: ' + category : ''}`;
+    subCell.font  = { size: 11, italic: true, color: { argb: '555555' } };
+    subCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: LIGHT } };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    sheet.getRow(4).height = 8;
+
+    // KPI summary row
+    const kpis = [
+      { label: 'Jami Tikilgan Pul', value: totalInvested,   fmt: '#,##0" UZS"', color: RED   },
+      { label: 'Potentsial Tushum', value: totalPotRevenue, fmt: '#,##0" UZS"', color: GREEN  },
+      { label: 'Potentsial Foyda',  value: totalPotProfit,  fmt: '#,##0" UZS"', color: INDIGO },
+      { label: 'Mahsulot soni',     value: products.length, fmt: '#,##0',        color: DARK   },
+    ];
+
+    const kpiLabel = sheet.getRow(5); kpiLabel.height = 20;
+    const kpiValue = sheet.getRow(6); kpiValue.height = 28;
+    kpis.forEach((k, i) => {
+      const lc = kpiLabel.getCell(i * 2 + 1); lc.value = k.label;
+      styleCell(lc, { bold: true, size: 10, bg: 'FFF3F4F6', align: 'center', color: '555555' });
+      sheet.mergeCells(5, i * 2 + 1, 5, i * 2 + 2);
+      const vc = kpiValue.getCell(i * 2 + 1); vc.value = k.value; vc.numFmt = k.fmt;
+      styleCell(vc, { bold: true, size: 13, align: 'center', color: k.color, bg: LIGHT });
+      sheet.mergeCells(6, i * 2 + 1, 6, i * 2 + 2);
+    });
+
+    sheet.getRow(7).height = 8;
+
+    // Table headers
+    const headers = ['#', 'Brend', 'Artikul', 'Kolleksiya', 'Polka', 'Sklad', 'Tan Narxi', 'Dona', 'Tikilgan Pul', 'Sot. Narxi', 'Pot. Tushum', 'Pot. Foyda', 'Margin %'];
+    const colWidths = [5, 18, 18, 18, 10, 16, 16, 8, 20, 16, 20, 20, 12];
+    const hRow = sheet.getRow(8); hRow.height = 26;
+    headers.forEach((h, i) => {
+      const cell = hRow.getCell(i + 1); cell.value = h;
+      styleCell(cell, { bold: true, size: 10, bg: DARK, color: WHITE, align: 'center' });
+      sheet.getColumn(i + 1).width = colWidths[i];
+    });
+
+    // Data rows
+    products.forEach((p, idx) => {
+      const r = sheet.getRow(idx + 9); r.height = 20;
+      const bg = idx % 2 === 0 ? WHITE : LIGHT;
+      const margin = p.marginPercent || 0;
+      const marginColor = margin >= 30 ? GREEN : margin >= 15 ? AMBER : RED;
+
+      const vals = [
+        idx + 1, p.brand || '-', p.artikul || '-', p.collection || '-', p.polka || '-',
+        p.warehouseInfo?.[0]?.name || p.warehouseName || '-',
+        p.costPrice || 0, p.quantity || 0, p.investedAmount || 0,
+        p.pricePerRoll || 0, p.potentialRevenue || 0, p.potentialProfit || 0,
+        parseFloat((p.marginPercent || 0).toFixed(1))
+      ];
+
+      vals.forEach((v, i) => {
+        const cell = r.getCell(i + 1); cell.value = v;
+        const isMoneyCol = [6, 8, 9, 10, 11].includes(i);
+        const isMarginCol = i === 12;
+        styleCell(cell, {
+          bg,
+          align: i === 1 || i === 2 || i === 3 ? 'left' : 'center',
+          numFmt: isMoneyCol ? '#,##0" UZS"' : isMarginCol ? '0.0"%"' : undefined,
+          color: isMarginCol ? marginColor : i === 8 ? RED : DARK,
+          bold: i === 8,
+        });
+      });
+    });
+
+    // Totals
+    const tRow = sheet.getRow(products.length + 9); tRow.height = 26;
+    const totals = ['', 'JAMI', '', '', '', '', '', products.reduce((s, p) => s + p.quantity, 0), totalInvested, '', totalPotRevenue, totalPotProfit, ''];
+    totals.forEach((v, i) => {
+      const cell = tRow.getCell(i + 1); cell.value = v;
+      const isMoneyCol = [7, 10, 11].includes(i);
+      const isTikilgan = i === 8;
+      styleCell(cell, {
+        bold: true, size: 12, bg: DARK, color: WHITE, align: 'center',
+        numFmt: (isMoneyCol || isTikilgan) ? '#,##0" UZS"' : undefined
+      });
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="OBOI_Kapital_${new Date().toISOString().split('T')[0]}.xlsx"`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('exportCapitalExcel error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.exportSalesExcel = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;

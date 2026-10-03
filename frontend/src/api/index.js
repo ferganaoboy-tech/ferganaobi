@@ -215,4 +215,8 @@ export const exportFullBackupJson = ()  => api.get('/export/full-backup-json', {
 export const recalculateDebts    = ()  => api.post('/customers/recalculate-debts').then(extractData);
 export const sendDailyReportTelegram = () => api.post('/reports/send-daily').then(extractData);
 
+// ── Tikilgan Kapital API ──────────────────────────────────────────────────────
+export const fetchCapitalReport  = (params) => api.get('/reports/capital', { params }).then(extractData);
+export const exportCapitalExcel  = (params) => api.get('/reports/capital/export-excel', { params, responseType: 'blob' });
+
 export default api;
