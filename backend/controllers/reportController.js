@@ -383,8 +383,8 @@ exports.getSalesReport = async (req, res) => {
       ].filter(p => p.value > 0);
 
     const typeChartData = [
-      { name: 'Ulgurji', value: typeBreakdown.retail, color: '#ec4899' },
-      { name: 'Sotuv', value: typeBreakdown.wholesale, color: '#3b82f6' },
+      { name: 'Chakana', value: typeBreakdown.retail,    color: '#ec4899' },
+      { name: 'Ulgurji', value: typeBreakdown.wholesale, color: '#3b82f6' },
     ].filter(d => d.value > 0);
 
     const daysOfWeekNames = ['Yak', 'Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan'];
@@ -923,7 +923,7 @@ exports.exportSalesExcel = async (req, res) => {
       { label: 'Vozvrat Summasi',   value: totalReturnAmount,      fmt: '#,##0" UZS"', color: RED   },
       { label: 'Sof Foyda',         value: totalProfit,            fmt: '#,##0" UZS"', color: INDIGO },
       { label: 'Sotilgan (rulon)',  value: totalQuantity,          fmt: '#,##0',        color: DARK  },
-      { label: 'Buyurtmalar',       value: orders.length,          fmt: '#,##0',        color: DARK  },
+      { label: 'Buyurtmalar',       value: ordersList.length,      fmt: '#,##0',        color: DARK  },
     ];
 
     const kpiLabelRow = summarySheet.getRow(5);

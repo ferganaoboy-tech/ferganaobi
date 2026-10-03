@@ -533,7 +533,8 @@ async function computeOrderStats(warehouseId = null) {
       return {
         _id: ds._id,
         amount: Math.max(0, ds.amount - qr.refund),
-        profit: Math.max(0, ds.profit - (qr.refund - qr.refundCost))
+        // Foyda manfiy bo'lishi mumkin (vozvrat savdodan ko'p bo'lsa) — yashirmaymiz
+        profit: ds.profit - (qr.refund - qr.refundCost)
       };
     }
     return ds;
@@ -544,18 +545,18 @@ async function computeOrderStats(warehouseId = null) {
   const monthlyProfit  = monthlyRevenueResult[0]?.profit || 0;
   const mQRRefund      = monthlyQRResult[0]?.refund || 0;
   const mQRRefundCost  = monthlyQRResult[0]?.refundCost || 0;
-  const finalMonthlyRevenue = Math.max(0, monthlyRevenue - mQRRefund);
-  const finalMonthlyProfit  = Math.max(0, monthlyProfit - (mQRRefund - mQRRefundCost));
+  const finalMonthlyRevenue = Math.max(0, monthlyRevenue - mQRRefund); // Tushum manfiy bo'lmaydi (UI uchun)
+  const finalMonthlyProfit  = monthlyProfit - (mQRRefund - mQRRefundCost); // Foyda manfiy bo'lishi mumkin
 
   // Total all-time
   const totalRevenue  = totalRevenueResult[0]?.total || 0;
   const totalProfit   = totalRevenueResult[0]?.profit || 0;
   const tQRRefund     = totalQRResult[0]?.refund || 0;
   const tQRRefundCost = totalQRResult[0]?.refundCost || 0;
-  const finalTotalRevenue = Math.max(0, totalRevenue - tQRRefund);
-  const finalTotalProfit  = Math.max(0, totalProfit - (tQRRefund - tQRRefundCost));
+  const finalTotalRevenue = Math.max(0, totalRevenue - tQRRefund); // Tushum manfiy bo'lmaydi (UI uchun)
+  const finalTotalProfit  = totalProfit - (tQRRefund - tQRRefundCost); // Foyda manfiy bo'lishi mumkin
 
-  // FIX: Ayrim omborlar bo'yicha qaytarilgan tovarlar summasini ayirish
+  // Omborlar bo'yicha
   const warehouseReturnsMap = {};
   warehouseReturns.forEach(wr => {
     warehouseReturnsMap[wr._id?.toString()] = { refund: wr.refund, refundCost: wr.refundCost };
@@ -563,7 +564,7 @@ async function computeOrderStats(warehouseId = null) {
   revenueByWarehouse.forEach(rw => {
     const returnData = warehouseReturnsMap[rw._id?.toString()] || { refund: 0, refundCost: 0 };
     rw.total  = Math.max(0, rw.total  - returnData.refund);
-    rw.profit = Math.max(0, rw.profit - (returnData.refund - returnData.refundCost));
+    rw.profit = rw.profit - (returnData.refund - returnData.refundCost); // Manfiy bo'lishi mumkin
   });
 
   return {
