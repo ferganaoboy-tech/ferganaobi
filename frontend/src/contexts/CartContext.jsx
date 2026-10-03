@@ -17,7 +17,22 @@ const CART_TYPE_KEY = 'oboi_crm_cart_ordertype';
 const loadCartFromStorage = () => {
   try {
     const saved = localStorage.getItem(CART_KEY);
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    const items = JSON.parse(saved);
+
+    // ─── Eskirgan narx himoyasi ───────────────────────────────────────────────
+    // Agar localStorage'da narx dollar qiymati sifatida (masalan, 8.50) so'm
+    // sifatida saqlangan bo'lsa — pricePerRoll dan tiklaymiz.
+    // Belgi: unitPrice < 1000 lekin pricePerRoll >= 1000.
+    return items.map(item => {
+      const usdLike = item.unitPrice < 1000 && (item.pricePerRoll >= 1000 || item.wholesalePrice >= 1000);
+      if (usdLike) {
+        // pricePerRoll asosiy narx sifatida ishlatiladi — tiklash
+        return { ...item, unitPrice: item.pricePerRoll || item.wholesalePrice || item.unitPrice };
+      }
+      return item;
+    });
+    // ─────────────────────────────────────────────────────────────────────────
   } catch {
     return [];
   }
@@ -320,10 +335,13 @@ export const CartProvider = ({ children }) => {
 
   // ─── updateCartItemPrice ──────────────────────────────────────────────────
   const updateCartItemPrice = useCallback((productId, unit, price) => {
+    const numPrice = Number(price);
+    // Nol, manfiy yoki NaN narxni qabul qilmaymiz
+    if (!numPrice || numPrice < 0) return;
     haptics.light();
     setCartItems(prev => prev.map(item => {
       if (item.product === productId && item.unit === unit) {
-        return { ...item, unitPrice: Number(price), isCustomPrice: true };
+        return { ...item, unitPrice: numPrice, isCustomPrice: true };
       }
       return item;
     }));

@@ -136,6 +136,36 @@ const CartDrawer = () => {
   const debtAmount = finalTotal - (checkoutData.paymentType === 'naqd' ? finalTotal : parsePaidAmount(checkoutData.paidAmount));
 
   const submitOrder = (customerId) => {
+    // ─── Frontend Narx Validatsiyasi (API ga yuborishdan oldin) ──────────────
+    // Bu Backend xavfsizlik tekshiruvidan OLDIN ishlaydi — foydalanuvchiga
+    // qaysi mahsulot va minimal narx haqida aniq xabar beradi.
+    for (const item of cartItems) {
+      const costPrice = item.productDetail?.costPrice;
+      if (!costPrice) continue;
+
+      // item.unitPrice har doim UZS'da, lekin foydalanuvchi USD rejimida ko'radi
+      const priceInUzs = item.unitPrice;
+      const TOLERANCE = 1; // 1 so'm rounding tolerance
+
+      if (priceInUzs < (costPrice - TOLERANCE)) {
+        haptics.warning();
+        const label = item.brand ? `${item.brand} ${item.artikul}` : item.artikul;
+        const minDisplay = isUsd
+          ? `$${(costPrice / usdRate).toFixed(2)}`
+          : `${costPrice.toLocaleString('ru-RU')} so'm`;
+        const curDisplay = isUsd
+          ? `$${(priceInUzs / usdRate).toFixed(2)}`
+          : `${Math.round(priceInUzs).toLocaleString('ru-RU')} so'm`;
+        toast.error(
+          `"${label}" narxi tan narxidan past!\nMinimal: ${minDisplay} | Kiritilgan: ${curDisplay}`,
+          { duration: 6000, id: `price-warn-${item.product}` }
+        );
+        setSubmitting(false);
+        return;
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const orderItems = cartItems.map(item => ({
       product: item.product,
       unit: item.unit,

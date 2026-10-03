@@ -34,7 +34,7 @@ exports.processOrder = async (orderDataInput, user, io) => {
   // 1.5. Smena (Shift) ochiqligini tekshirish — faqat settings'da yoqilgan bo'lsa
   // Settings'dan shiftEnabled flagini o'qiymiz (lean — tezkor)
   const Settings = require('../models/Settings');
-  const settings = await Settings.findOne().select('features').lean();
+  const settings = await Settings.findOne().select('features usdExchangeRate').lean();
   const shiftEnabled = settings?.features?.shiftEnabled ?? false;
 
   if (shiftEnabled) {
@@ -78,13 +78,43 @@ exports.processOrder = async (orderDataInput, user, io) => {
       unitCostUsd: product.costPriceUsd || 0,
     });
 
-    // API Bypass Himoyasi: Narxni bazadagi tan narx bilan tekshirish
+    // ─── Narx Xavfsizlik Tekshiruvi ─────────────────────────────────────────
+    // item.unitPrice har doim SO'MDA keladi (frontend konvertatsiya qiladi).
+    // product.costPrice ham SO'MDA saqlangan.
+    // Rounding xatolariga bardosh berish uchun 1 so'm tolerance qo'shamiz.
+    const PRICE_TOLERANCE = 1; // 1 so'm — floating point va yaxlitlash farqlari uchun
     const effectiveUnitPrice = item.unitPrice * (1 - (item.discount || 0) / 100);
-    if (user && user.role !== 'superadmin' && product.costPrice && effectiveUnitPrice < product.costPrice) {
-      throw new Error(
-        `Xavfsizlik tizimi: "${product.brand || product.artikul}" mahsulotini tan narxidan (${product.costPrice} so'm) arzon sota olmaysiz! Ruxsat etilmagan operatsiya.`
-      );
+
+    const isPrivilegedRole = user && ['superadmin', 'admin'].includes(user.role);
+
+    if (!isPrivilegedRole && product.costPrice) {
+      // USD rejimida ham tekshirish: agar item.unitPrice juda kichik bo'lsa
+      // (masalan, dollar qiymati so'm sifatida kelgan bo'lsa) — aniqlaymiz
+      const looksLikeUsdValue = effectiveUnitPrice < 1000 && product.costPrice > 1000;
+      if (looksLikeUsdValue) {
+        // USD qiymati so'm sifatida yuborilgan — bu frontend bug
+        // usdRate settings'dan olindi (yuqorida)
+        const usdRate = settings?.usdExchangeRate || 12500;
+        const convertedPrice = effectiveUnitPrice * usdRate;
+        if (convertedPrice < (product.costPrice - PRICE_TOLERANCE)) {
+          const minUsd = (product.costPrice / usdRate).toFixed(2);
+          throw new Error(
+            `"${product.brand || product.artikul}" mahsuloti tan narxidan arzon sotilmoqda! ` +
+            `Minimal ruxsat etilgan narx: $${minUsd} (${product.costPrice.toLocaleString()} so'm). ` +
+            `Kiritilgan narx: $${effectiveUnitPrice.toFixed(2)}.`
+          );
+        }
+      } else if (effectiveUnitPrice < (product.costPrice - PRICE_TOLERANCE)) {
+        // Standart tekshiruv: so'm vs so'm
+        const minPrice = product.costPrice.toLocaleString('ru-RU');
+        throw new Error(
+          `"${product.brand || product.artikul}" mahsulotini tan narxidan arzon sota olmaysiz! ` +
+          `Minimal ruxsat etilgan narx: ${minPrice} so'm. ` +
+          `Kiritilgan narx: ${Math.round(effectiveUnitPrice).toLocaleString('ru-RU')} so'm.`
+        );
+      }
     }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const itemSubtotal = effectiveUnitPrice * item.quantity;
     calculatedTotal += itemSubtotal;
