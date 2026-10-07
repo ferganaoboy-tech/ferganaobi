@@ -28,7 +28,9 @@ export const useDebtors = () => {
   return useQuery({
     queryKey: ['debtors'],
     queryFn: api.fetchDebtors,
-    staleTime: 0,
+    // To'lov qilinganda useCreatePayment ['debtors'] ni invalidate qiladi —
+    // shuning uchun 30s staleTime xavfsiz: real-time ma'lumot yo'qotilmaydi.
+    staleTime: 30_000,
   });
 };
 

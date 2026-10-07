@@ -139,34 +139,22 @@ exports.createPayment = async (req, res) => {
 
         let remainingToDistribute = paymentAmount;
         const updatedOrders = [];
-        
-        const bulkOperations = [];
-        
-        for (let o of debtOrders) {
+
+        for (const o of debtOrders) {
           if (remainingToDistribute <= 0) break;
 
           const applyToThisOrder = Math.min(remainingToDistribute, o.debtAmount);
 
-          // ✅ FIX: $inc bilan paidAmount oshiramiz va debtAmount atomik formula bilan hisoblaymiz.
-          // $set { debtAmount } o'rniga DB'da hisoblash — overrideTotalAmount bo'lsa ham to'g'ri ishlaydi.
-          bulkOperations.push({
-            updateOne: {
-              filter: { _id: o._id },
-              update: {
-                $inc: { 
-                  paidAmount: applyToThisOrder,
-                  debtAmount: -applyToThisOrder
-                }
-              }
-            }
-          });
+          // ✅ FIX (senior): bulkWrite o'rniga har bir buyurtma uchun save() chaqiriladi.
+          // Sabab: Order.bulkWrite() Mongoose pre-save hook'ni ISHLATMAYDI.
+          // pre-save hook: debtAmount = totalAmount - paidAmount - cashbackUsed
+          // Bu formula overrideTotalAmount va cashbackUsed ni ham to'g'ri hisobga oladi.
+          // bulkWrite'dagi qo'lda $inc: {debtAmount: -X} esa bu holatlarni noto'g'ri hisoblashi mumkin.
+          o.paidAmount += applyToThisOrder;
+          await o.save({ session }); // pre-save hook debtAmount ni qayta hisoblaydi
 
           remainingToDistribute -= applyToThisOrder;
           updatedOrders.push({ orderNumber: o.orderNumber, applied: applyToThisOrder });
-        }
-
-        if (bulkOperations.length > 0) {
-          await Order.bulkWrite(bulkOperations, { session });
         }
 
         // Create the payment record

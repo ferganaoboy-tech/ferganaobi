@@ -1,6 +1,7 @@
 const Customer = require('../models/Customer');
 const { logAction } = require('../utils/logger');
 const Order = require('../models/Order');
+const Payment = require('../models/Payment');
 
 // @desc    Get all customers
 // @route   GET /api/customers
@@ -184,8 +185,6 @@ exports.deleteCustomer = async (req, res) => {
 // @access  Public
 exports.getDebtors = async (req, res) => {
   try {
-    const Payment = require('../models/Payment');
-
     const debtors = await Customer.find({ isActive: true, totalDebt: { $gt: 0 } })
       .sort({ totalDebt: -1 })
       .lean();
@@ -284,31 +283,28 @@ exports.recalculateAllDebts = async (req, res) => {
     const customers = await Customer.find({ isActive: true });
     let fixed = 0;
 
-    for (let customer of customers) {
-      // Sum all confirmed/delivered orders' debtAmount
-      const orders = await Order.find({ 
-        customer: customer._id, 
+    for (const customer of customers) {
+      // Faqat aktiv buyurtmalarning debtAmount ni yig'amiz.
+      // MUHIM: order.debtAmount = totalAmount - paidAmount - cashbackUsed (pre-save hook hisoblagan).
+      // Shuning uchun Payment jadvalini alohida ayirishga hojat yo'q —
+      // to'lovlar allaqachon order.paidAmount orqali order.debtAmount'ga aks ettirilgan.
+      const orders = await Order.find({
+        customer: customer._id,
         status: { $in: ['confirmed', 'delivered'] }
-      });
+      }).lean();
 
       let realTotalDebt = 0;
       let realTotalPurchased = 0;
 
-      for (let order of orders) {
-        realTotalDebt += Math.max(0, order.debtAmount || 0);
+      for (const order of orders) {
+        realTotalDebt     += Math.max(0, order.debtAmount    || 0);
         realTotalPurchased += order.totalAmount || 0;
       }
 
-      // Subtract all confirmed payments
-      const Payment = require('../models/Payment');
-      const payments = await Payment.find({ customer: customer._id });
-      const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-
-      // Real debt = sum of order debts (already reflects payments via order.debtAmount)
       if (customer.totalDebt !== realTotalDebt || customer.totalPurchased !== realTotalPurchased) {
         await Customer.findByIdAndUpdate(customer._id, {
-          $set: { 
-            totalDebt: Math.max(0, realTotalDebt),
+          $set: {
+            totalDebt:      Math.max(0, realTotalDebt),
             totalPurchased: realTotalPurchased
           }
         });
@@ -321,3 +317,4 @@ exports.recalculateAllDebts = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
