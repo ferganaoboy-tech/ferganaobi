@@ -177,6 +177,8 @@ export const fetchPayments           = (params) => api.get('/payments', { params
 export const fetchCustomerPayments   = (customerId, params) =>
   api.get('/payments', { params: { customer: customerId, limit: 100, ...params } }).then(extractData);
 export const createPayment           = (data)   => api.post('/payments', data).then(extractData);
+export const updatePayment           = ({ id, data }) => api.put(`/payments/${id}`, data).then(extractData);
+export const deletePayment           = (id)     => api.delete(`/payments/${id}`).then(extractData);
 
 // ─── Returns API ──────────────────────────────────────────────────────────────
 export const fetchReturns     = (params) => api.get('/returns', { params }).then(extractData);

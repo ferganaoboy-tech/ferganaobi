@@ -83,12 +83,15 @@ function DebtProgressBar({ paidPercent, totalPaid, originalDebt, currentDebt, fo
 }
 
 // ─── Payment Item ─────────────────────────────────────────────────────────────
-function PaymentItem({ payment, formatPrice, index }) {
+import { MoreVertical, Edit, Trash2 } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+
+function PaymentItem({ payment, formatPrice, index, onEdit, onDelete }) {
   const meta = getMethodMeta(payment.method);
   const { Icon, label, color } = meta;
 
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-subtle last:border-0">
+    <div className="flex items-start gap-3 py-3 border-b border-subtle last:border-0 relative">
       {/* Index + Icon */}
       <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
         <div className={`w-8 h-8 rounded-full border flex items-center justify-center ${color}`}>
@@ -100,14 +103,45 @@ function PaymentItem({ payment, formatPrice, index }) {
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          {/* Amount — asosiy */}
-          <div className="text-[16px] font-[800] text-emerald-600 tracking-tight font-mono leading-none">
-            + {formatPrice(payment.amount)}
+          <div className="flex items-center gap-2">
+            {/* Amount — asosiy */}
+            <div className="text-[16px] font-[800] text-emerald-600 tracking-tight font-mono leading-none">
+              + {formatPrice(payment.amount)}
+            </div>
+            {/* Method badge */}
+            <span className={`text-[10px] font-[700] uppercase tracking-wider px-2 py-0.5 rounded-full border ${color}`}>
+              {label}
+            </span>
           </div>
-          {/* Method badge */}
-          <span className={`text-[10px] font-[700] uppercase tracking-wider px-2 py-0.5 rounded-full border ${color}`}>
-            {label}
-          </span>
+
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-subtle text-tertiary hover:text-primary transition-colors">
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="end"
+                className="min-w-[140px] bg-surface rounded-xl shadow-xl border border-subtle p-1 z-[60] animate-in fade-in zoom-in-95 duration-100"
+              >
+                <DropdownMenu.Item
+                  onClick={() => onEdit(payment)}
+                  className="flex items-center gap-2 px-2.5 py-2 text-[13px] font-[500] text-secondary hover:text-primary hover:bg-subtle rounded-lg cursor-pointer outline-none"
+                >
+                  <Edit className="w-4 h-4" />
+                  Tahrirlash
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  onClick={() => onDelete(payment)}
+                  className="flex items-center gap-2 px-2.5 py-2 text-[13px] font-[500] text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer outline-none"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  O'chirish
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </div>
 
         {/* Date + Cashier */}
@@ -157,11 +191,19 @@ function matchFilter(payment, filter) {
 }
 
 // ─── Main Drawer ──────────────────────────────────────────────────────────────
+import ConfirmModal from './ConfirmModal';
+import EditPaymentModal from './EditPaymentModal';
+import { useDeletePayment } from '../hooks/usePayments';
+
 export default function DebtPaymentHistoryDrawer({ debtor, onClose }) {
   const { data, isLoading, error } = useCustomerPaymentHistory(debtor?._id);
   const { formatPrice } = useCurrency();
   const [methodFilter, setMethodFilter] = useState('all');
   const [showAll, setShowAll] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [deletingPayment, setDeletingPayment] = useState(null);
+
+  const deleteMutation = useDeletePayment();
 
   const payments = data?.data || [];
 
@@ -169,6 +211,12 @@ export default function DebtPaymentHistoryDrawer({ debtor, onClose }) {
   const SHOW_LIMIT = 10;
   const displayedPayments = showAll ? filtered : filtered.slice(0, SHOW_LIMIT);
   const hasMore = filtered.length > SHOW_LIMIT;
+
+  const handleDelete = () => {
+    if (deletingPayment) {
+      deleteMutation.mutate(deletingPayment._id);
+    }
+  };
 
   // Summary stats per method
   const statsByMethod = {};
@@ -384,6 +432,8 @@ export default function DebtPaymentHistoryDrawer({ debtor, onClose }) {
                     payment={payment}
                     formatPrice={formatPrice}
                     index={filtered.length - idx} // Teskari tartib — eng so'nggi #1
+                    onEdit={setEditingPayment}
+                    onDelete={setDeletingPayment}
                   />
                 ))}
 
@@ -411,6 +461,21 @@ export default function DebtPaymentHistoryDrawer({ debtor, onClose }) {
           </div>
         </div>
       </div>
+
+      <EditPaymentModal 
+        isOpen={!!editingPayment} 
+        onClose={() => setEditingPayment(null)} 
+        payment={editingPayment} 
+      />
+
+      <ConfirmModal
+        isOpen={!!deletingPayment}
+        onClose={() => setDeletingPayment(null)}
+        onConfirm={handleDelete}
+        title="To'lovni o'chirish"
+        message="Siz rostdan ham ushbu to'lovni o'chirmoqchimisiz? Bu amalni orqaga qaytarib bo'lmaydi va qarz miqdori qayta hisoblanadi."
+        confirmText="O'chirish"
+      />
     </>
   );
 }

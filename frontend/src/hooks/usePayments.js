@@ -40,3 +40,43 @@ export const useCreatePayment = () => {
     }
   });
 };
+
+export const useUpdatePayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.updatePayment,
+    onSuccess: () => {
+      toast.success("To'lov tahrirlandi");
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orderStats'] });
+      queryClient.invalidateQueries({ queryKey: ['debtors'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Tahrirlashda xatolik yuz berdi");
+    }
+  });
+};
+
+export const useDeletePayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.deletePayment,
+    onSuccess: () => {
+      toast.success("To'lov o'chirildi");
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orderStats'] });
+      queryClient.invalidateQueries({ queryKey: ['debtors'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "O'chirishda xatolik yuz berdi");
+    }
+  });
+};

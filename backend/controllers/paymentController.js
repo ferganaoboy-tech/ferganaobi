@@ -253,3 +253,194 @@ exports.getCustomerPayments = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+const reversePaymentAmount = async (payment, amountToReverse, session) => {
+  const { order: orderId, customer: customerId } = payment;
+  const Customer = require('../models/Customer');
+  const Order = require('../models/Order');
+
+  // 1. Update customer totalDebt
+  await Customer.findByIdAndUpdate(customerId, {
+    $inc: { totalDebt: amountToReverse }
+  }, { session });
+
+  // 2. Reverse order paidAmount
+  if (orderId) {
+    const order = await Order.findById(orderId).session(session);
+    if (order) {
+      order.paidAmount = Math.max(0, order.paidAmount - amountToReverse);
+      await order.save({ session });
+    }
+  } else {
+    // Reverse from general orders
+    let remainingToReverse = amountToReverse;
+    const ordersToReverse = await Order.find({
+      customer: customerId,
+      paidAmount: { $gt: 0 }
+    }).sort({ createdAt: -1 }).session(session);
+
+    for (const o of ordersToReverse) {
+      if (remainingToReverse <= 0) break;
+      const subtract = Math.min(remainingToReverse, o.paidAmount);
+      o.paidAmount -= subtract;
+      await o.save({ session });
+      remainingToReverse -= subtract;
+    }
+  }
+};
+
+const applyPaymentAmount = async (payment, amountToApply, session) => {
+  const { order: orderId, customer: customerId } = payment;
+  const Customer = require('../models/Customer');
+  const Order = require('../models/Order');
+
+  // 1. Update customer totalDebt
+  const customer = await Customer.findByIdAndUpdate(customerId, {
+    $inc: { totalDebt: -amountToApply }
+  }, { new: true, session });
+
+  // 2. Apply order paidAmount
+  if (orderId) {
+    const order = await Order.findById(orderId).session(session);
+    if (order) {
+      order.paidAmount += amountToApply;
+      await order.save({ session });
+    }
+  } else {
+    // Apply to general orders
+    let remainingToApply = amountToApply;
+    const ordersToApply = await Order.find({
+      customer: customerId,
+      status: { $in: ['confirmed', 'delivered'] },
+      debtAmount: { $gt: 0 }
+    }).sort({ createdAt: 1 }).session(session);
+
+    for (const o of ordersToApply) {
+      if (remainingToApply <= 0) break;
+      const applyToThisOrder = Math.min(remainingToApply, o.debtAmount);
+      o.paidAmount += applyToThisOrder;
+      await o.save({ session });
+      remainingToApply -= applyToThisOrder;
+    }
+  }
+};
+
+// @desc    Update payment
+// @route   PUT /api/payments/:id
+// @access  Private
+exports.updatePayment = async (req, res) => {
+  const session = await require('mongoose').startSession();
+  try {
+    let populatedPayment;
+    let paymentAmountFinal;
+    let customerDoc;
+
+    await session.withTransaction(async () => {
+      const paymentId = req.params.id;
+      const { amount, method, notes } = req.body;
+      const newAmount = Number(amount);
+
+      const payment = await require('../models/Payment').findById(paymentId).session(session);
+      if (!payment) throw new Error("To'lov topilmadi");
+
+      customerDoc = await require('../models/Customer').findById(payment.customer).session(session);
+
+      const oldAmount = payment.amount;
+
+      if (newAmount && newAmount !== oldAmount) {
+        if (newAmount <= 0) throw new Error("To'lov summasi musbat bo'lishi kerak");
+        
+        // Check if increasing amount exceeds debt
+        if (newAmount > oldAmount) {
+           const diff = newAmount - oldAmount;
+           if (payment.order) {
+             const order = await require('../models/Order').findById(payment.order).session(session);
+             if (diff > order.debtAmount) throw new Error(`Qo'shimcha to'lov buyurtma qarzdorligidan oshib ketdi`);
+           } else {
+             if (diff > customerDoc.totalDebt) throw new Error(`Qo'shimcha to'lov jami qarzdorlikdan oshib ketdi`);
+           }
+        }
+
+        await reversePaymentAmount(payment, oldAmount, session);
+        await applyPaymentAmount(payment, newAmount, session);
+        payment.amount = newAmount;
+      }
+
+      if (method) payment.method = method;
+      if (notes !== undefined) payment.notes = notes;
+
+      await payment.save({ session });
+
+      populatedPayment = await require('../models/Payment').findById(payment._id)
+        .populate('customer', 'name phone')
+        .populate('order', 'orderNumber')
+        .session(session);
+        
+      paymentAmountFinal = payment.amount;
+    });
+
+    // Cleanup customer debt if it went negative
+    if (customerDoc) {
+      await require('../models/Customer').updateOne(
+        { _id: customerDoc._id, totalDebt: { $lt: 0 } },
+        { $set: { totalDebt: 0 } }
+      );
+    }
+
+    const { clearDashboardCache } = require('../controllers/orderController');
+    clearDashboardCache();
+
+    // Emit socket event (optional for update)
+    req.app.get('io').emit('payment:updated', { payment: populatedPayment });
+
+    require('../utils/logger').logAction(
+      req, 'PAYMENT', 'Payment', populatedPayment._id,
+      `To'lov tahrirlandi: ${populatedPayment.amount} so'm (${populatedPayment.customer?.name})`
+    );
+
+    res.status(200).json({ success: true, data: populatedPayment });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  } finally {
+    await session.endSession();
+  }
+};
+
+// @desc    Delete payment
+// @route   DELETE /api/payments/:id
+// @access  Private
+exports.deletePayment = async (req, res) => {
+  const session = await require('mongoose').startSession();
+  try {
+    let paymentDoc;
+    let customerDoc;
+
+    await session.withTransaction(async () => {
+      const paymentId = req.params.id;
+      const payment = await require('../models/Payment').findById(paymentId).session(session);
+      if (!payment) throw new Error("To'lov topilmadi");
+
+      paymentDoc = payment;
+      customerDoc = await require('../models/Customer').findById(payment.customer).session(session);
+
+      await reversePaymentAmount(payment, payment.amount, session);
+
+      await require('../models/Payment').findByIdAndDelete(paymentId, { session });
+    });
+
+    const { clearDashboardCache } = require('../controllers/orderController');
+    clearDashboardCache();
+
+    req.app.get('io').emit('payment:deleted', { paymentId: paymentDoc._id, customerId: customerDoc?._id });
+
+    require('../utils/logger').logAction(
+      req, 'PAYMENT', 'Payment', paymentDoc._id,
+      `To'lov o'chirildi: ${paymentDoc.amount} so'm (${customerDoc?.name})`
+    );
+
+    res.status(200).json({ success: true, data: {} });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  } finally {
+    await session.endSession();
+  }
+};

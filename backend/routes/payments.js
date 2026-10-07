@@ -3,6 +3,8 @@ const router = express.Router();
 const {
   getPayments,
   createPayment,
+  updatePayment,
+  deletePayment,
 } = require('../controllers/paymentController');
 
 // GET  /api/payments          — barcha to'lovlar (filter: customer, order, method, dateFrom, dateTo)
@@ -11,6 +13,10 @@ const {
 router.route('/')
   .get(getPayments)
   .post(createPayment);
+
+router.route('/:id')
+  .put(updatePayment)
+  .delete(deletePayment);
 
 module.exports = router;
 
