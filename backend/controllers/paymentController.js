@@ -74,7 +74,7 @@ exports.createPayment = async (req, res) => {
     let orderNumberFinal = 'Umumiy qarz';
 
     await session.withTransaction(async () => {
-      const { order: orderId, customer: customerId, amount, method, notes, receivedBy } = req.body;
+      const { order: singleOrderId, orders: orderIdsArray, customer: customerId, amount, method, notes, receivedBy } = req.body;
       const paymentAmount = Number(amount);
       paymentAmountFinal = paymentAmount;
 
@@ -88,30 +88,62 @@ exports.createPayment = async (req, res) => {
       }
       customerDoc = customer;
 
-      if (orderId) {
-        // 1. Specific order payment
-        const order = await Order.findOne({ _id: orderId, customer: customerId }).session(session);
-        if (!order) {
-          throw new Error('Buyurtma topilmadi yoki bu mijozga tegishli emas');
+      // Normalize to array of orders if possible
+      let targetOrderIds = [];
+      if (orderIdsArray && Array.isArray(orderIdsArray) && orderIdsArray.length > 0) {
+        targetOrderIds = orderIdsArray;
+      } else if (singleOrderId) {
+        targetOrderIds = [singleOrderId];
+      }
+
+      if (targetOrderIds.length > 0) {
+        // 1. Specific orders payment
+        const debtOrders = await Order.find({ 
+          _id: { $in: targetOrderIds }, 
+          customer: customerId 
+        }).sort({ createdAt: 1 }).session(session);
+
+        if (debtOrders.length === 0) {
+          throw new Error('Buyurtmalar topilmadi yoki bu mijozga tegishli emas');
         }
 
-        if (paymentAmount > order.debtAmount) {
-          throw new Error(`To'lov summasi buyurtma qarzdorligidan oshib ketdi. Buyurtma qarzi: ${order.debtAmount} so'm`);
+        const totalSelectedDebt = debtOrders.reduce((sum, o) => sum + o.debtAmount, 0);
+
+        if (paymentAmount > totalSelectedDebt) {
+          throw new Error(`To'lov summasi tanlangan buyurtmalar qarzdorligidan oshib ketdi. Jami qarz: ${totalSelectedDebt} so'm`);
         }
 
-        order.paidAmount += paymentAmount;
-        await order.save({ session }); // pre-save hook updates debtAmount
+        let remainingToDistribute = paymentAmount;
+        const updatedOrders = [];
+
+        for (const o of debtOrders) {
+          if (remainingToDistribute <= 0) break;
+          const applyToThisOrder = Math.min(remainingToDistribute, o.debtAmount);
+          
+          o.paidAmount += applyToThisOrder;
+          await o.save({ session }); // pre-save hook updates debtAmount
+
+          remainingToDistribute -= applyToThisOrder;
+          updatedOrders.push({ orderNumber: o.orderNumber, applied: applyToThisOrder });
+        }
 
         // Create the payment
-        const paymentArray = await Payment.create([{
-          order: orderId,
+        const paymentData = {
           customer: customerId,
           amount: paymentAmount,
           method,
-          notes,
+          notes: notes || (updatedOrders.length > 1 
+            ? `Tanlangan buyurtmalar: ${updatedOrders.map(x => `${x.orderNumber} (${x.applied})`).join(', ')}`
+            : undefined),
           receivedBy:   req.user ? req.user.name : (receivedBy || 'Tizim'),
           receivedById: req.user ? req.user._id  : undefined,
-        }], { session });
+        };
+        // Keep single order ref if it's only one, otherwise keep it general
+        if (debtOrders.length === 1) {
+          paymentData.order = debtOrders[0]._id;
+        }
+
+        const paymentArray = await Payment.create([paymentData], { session });
         const payment = paymentArray[0];
 
         // Update customer totalDebt using $inc
@@ -124,7 +156,7 @@ exports.createPayment = async (req, res) => {
           .populate('order', 'orderNumber')
           .session(session);
 
-        orderNumberFinal = order.orderNumber;
+        orderNumberFinal = updatedOrders.map(o => o.orderNumber).join(', ');
       } else {
         // 2. General customer payment (Umumiy qarzdan uzish)
         if (paymentAmount > customer.totalDebt) {

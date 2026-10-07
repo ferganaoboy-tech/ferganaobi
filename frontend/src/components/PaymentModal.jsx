@@ -14,12 +14,12 @@ const PaymentModal = ({ isOpen, onClose, customerId = null, customerName = '', t
   const { inputSymbol, toUzs, formatPrice } = useCurrency();
 
   const [formData, setFormData] = useState({
-    amount: '', method: 'cash', notes: '', orderId: ''
+    amount: '', method: 'cash', notes: '', orderIds: [''] // [''] means 'Umumiy qarzdan uzish'
   });
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({ amount: '', method: 'cash', notes: '', orderId: '' });
+      setFormData({ amount: '', method: 'cash', notes: '', orderIds: [''] });
     }
   }, [isOpen]);
 
@@ -33,10 +33,13 @@ const PaymentModal = ({ isOpen, onClose, customerId = null, customerName = '', t
     
     const amountUzs = toUzs(formData.amount);
     let isFullyPaid = false;
+    
+    const isGeneral = formData.orderIds.includes('') || formData.orderIds.length === 0;
 
-    if (formData.orderId) {
-      const order = debtOrders.find(o => o._id === formData.orderId);
-      if (order && amountUzs >= order.debtAmount) {
+    if (!isGeneral) {
+      const selectedOrders = debtOrders.filter(o => formData.orderIds.includes(o._id));
+      const targetDebt = selectedOrders.reduce((sum, o) => sum + o.debtAmount, 0);
+      if (amountUzs >= targetDebt) {
         isFullyPaid = true;
       }
     } else {
@@ -49,7 +52,7 @@ const PaymentModal = ({ isOpen, onClose, customerId = null, customerName = '', t
       customer: customerId,
       amount: amountUzs,
       method: formData.method,
-      order: formData.orderId || undefined,
+      orders: isGeneral ? undefined : formData.orderIds,
       notes: formData.notes
     }, { 
       onSuccess: () => {
@@ -110,8 +113,9 @@ const PaymentModal = ({ isOpen, onClose, customerId = null, customerName = '', t
           <div>
             <label className={labelClass}>Qaysi buyurtma uchun (ixtiyoriy)</label>
             <CustomSelect
-              value={formData.orderId}
-              onChange={(val) => setFormData({...formData, orderId: val})}
+              multiple={true}
+              value={formData.orderIds}
+              onChange={(val) => setFormData({...formData, orderIds: val})}
               options={[
                 { value: '', label: 'Umumiy qarzdan uzish' },
                 ...debtOrders.map(o => ({ value: o._id, label: `Buyurtma ${o.orderNumber} - Qarz: ${formatPrice(o.debtAmount)}` }))
