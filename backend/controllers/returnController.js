@@ -283,7 +283,8 @@ exports.getReturns = async (req, res) => {
 exports.quickReturn = async (req, res) => {
   const session = await mongoose.startSession();
   try {
-    let { items, totalRefundAmount, reason, warehouse } = req.body;
+    let { items, totalRefundAmount, reason, warehouse, customer, order, orderId } = req.body;
+    const targetOrderId = order || orderId;
     const io = req.app.get('io');
 
     if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
@@ -299,12 +300,47 @@ exports.quickReturn = async (req, res) => {
     }
 
     await session.withTransaction(async () => {
+      let targetOrder = null;
+      if (targetOrderId) {
+        targetOrder = await Order.findById(targetOrderId)
+          .populate('items.product')
+          .session(session);
+        if (!targetOrder) throw new Error('Biriktirilgan buyurtma topilmadi');
+
+        if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+          const docWh = targetOrder.warehouse?._id?.toString() || targetOrder.warehouse?.toString();
+          if (docWh !== req.user.warehouse.toString()) {
+            throw new Error('Siz boshqa filial buyurtmasidan vozvrat qila olmaysiz.');
+          }
+        }
+
+        warehouse = targetOrder.warehouse;
+        customer = targetOrder.customer;
+      }
+
       let processedItems = [];
       let calculatedTotalRefundCost = 0;
 
       for (let returnItem of items) {
         const product = await Product.findById(returnItem.product).session(session);
         if (!product) continue;
+
+        if (targetOrder) {
+          const orderItem = targetOrder.items.find(
+            i => i.product._id.toString() === returnItem.product.toString() ||
+                 i.product.toString() === returnItem.product.toString()
+          );
+          if (!orderItem) {
+            throw new Error(`Mahsulot (${product.brand || product.artikul}) ushbu buyurtmada topilmadi`);
+          }
+
+          const availableToReturn = orderItem.quantity - (orderItem.returnedQuantity || 0) - (orderItem.defectQuantity || 0);
+          if (returnItem.quantity > availableToReturn) {
+            throw new Error(`Siz (${product.brand || product.artikul}) dan ko'pi bilan ${availableToReturn} ${orderItem.unit} qaytara olasiz.`);
+          }
+
+          orderItem.returnedQuantity = (orderItem.returnedQuantity || 0) + returnItem.quantity;
+        }
 
         const { calculateQuantityInRolls } = require('../utils/unitConverter');
         const quantityInRolls = calculateQuantityInRolls(
@@ -335,19 +371,52 @@ exports.quickReturn = async (req, res) => {
 
       const returnDoc = new Return({
         warehouse,
+        order: targetOrder ? targetOrder._id : null,
+        customer: customer || null,
         items: processedItems,
         totalRefundAmount: totalRefundAmount || 0,
         totalRefundCost: calculatedTotalRefundCost,
         reason: reason || 'Tezkor vozvrat',
-        processedBy: req.user ? req.user.name : 'Tizim'
+        returnType: 'standard',
+        processedBy: req.user ? req.user.name : 'Tizim',
+        processedById: req.user ? req.user._id : null
       });
       await returnDoc.save({ session });
 
-      // Atomic stock qaytarish
+      // Agar buyurtmaga bog'langan bo'lsa, buyurtmani saqlaymiz (pre-save hook totalAmount va debtAmount'ni qayta hisoblaydi)
+      if (targetOrder) {
+        targetOrder.notes = targetOrder.notes
+          ? `${targetOrder.notes} | Vozvrat: ${returnDoc.returnNumber}`
+          : `Vozvrat: ${returnDoc.returnNumber}`;
+        await targetOrder.save({ session });
+      }
+
+      // Atomic stock qaytarish (standard vozvrat skladga qaytadi)
       for (let item of processedItems) {
         await Product.findByIdAndUpdate(
           item.product,
           { $inc: { quantity: item.quantityInRolls, soldQuantity: -item.quantityInRolls } },
+          { session }
+        );
+      }
+      
+      // Customer balance adjustment if customer is selected
+      const finalCustomerId = customer?._id || customer;
+      if (finalCustomerId && totalRefundAmount > 0) {
+        await Customer.findByIdAndUpdate(
+          finalCustomerId,
+          { 
+            $inc: { 
+              totalDebt: -returnDoc.totalRefundAmount, 
+              totalPurchased: -returnDoc.totalRefundAmount
+            } 
+          },
+          { session }
+        );
+        
+        await Customer.updateOne(
+          { _id: finalCustomerId, cashbackBalance: { $lt: 0 } },
+          { $set: { cashbackBalance: 0 } },
           { session }
         );
       }
@@ -357,7 +426,12 @@ exports.quickReturn = async (req, res) => {
           id: item.product.toString(),
           delta: item.quantityInRolls
         })),
-        customer: null
+        customer: finalCustomerId ? {
+          id: finalCustomerId.toString(),
+          debtDelta: -returnDoc.totalRefundAmount,
+          purchasedDelta: -returnDoc.totalRefundAmount,
+          cashbackDelta: 0
+        } : null
       };
 
       returnResult = returnDoc;
@@ -365,6 +439,8 @@ exports.quickReturn = async (req, res) => {
 
     // ─── Side effects ───
     populatedReturn = await Return.findById(returnResult._id)
+      .populate('order', 'orderNumber')
+      .populate('customer', 'name phone')
       .populate('warehouse', 'name')
       .populate('items.product', 'brand artikul polka category');
 
@@ -396,7 +472,8 @@ exports.quickReturn = async (req, res) => {
 exports.defectiveReturn = async (req, res) => {
   const session = await mongoose.startSession();
   try {
-    let { items, totalRefundAmount, reason, warehouse } = req.body;
+    let { items, totalRefundAmount, reason, warehouse, customer, order, orderId } = req.body;
+    const targetOrderId = order || orderId;
     const io = req.app.get('io');
 
     if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
@@ -406,15 +483,50 @@ exports.defectiveReturn = async (req, res) => {
     let returnResult;
     let populatedReturn;
 
-    const syncDeltas = { products: [], customer: null };
+    let syncDeltas = { products: [], customer: null };
 
     await session.withTransaction(async () => {
+      let targetOrder = null;
+      if (targetOrderId) {
+        targetOrder = await Order.findById(targetOrderId)
+          .populate('items.product')
+          .session(session);
+        if (!targetOrder) throw new Error('Biriktirilgan buyurtma topilmadi');
+
+        if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+          const docWh = targetOrder.warehouse?._id?.toString() || targetOrder.warehouse?.toString();
+          if (docWh !== req.user.warehouse.toString()) {
+            throw new Error('Siz boshqa filial buyurtmasidan brak qaytara olmaysiz.');
+          }
+        }
+
+        warehouse = targetOrder.warehouse;
+        customer = targetOrder.customer;
+      }
+
       let processedItems = [];
       let calculatedTotalRefundCost = 0;
 
       for (let returnItem of items) {
         const product = await Product.findById(returnItem.product).session(session);
         if (!product) throw new Error('Mahsulot topilmadi');
+
+        if (targetOrder) {
+          const orderItem = targetOrder.items.find(
+            i => i.product._id.toString() === returnItem.product.toString() ||
+                 i.product.toString() === returnItem.product.toString()
+          );
+          if (!orderItem) {
+            throw new Error(`Mahsulot (${product.brand || product.artikul}) ushbu buyurtmada topilmadi`);
+          }
+
+          const availableToReturn = orderItem.quantity - (orderItem.returnedQuantity || 0) - (orderItem.defectQuantity || 0);
+          if (returnItem.quantity > availableToReturn) {
+            throw new Error(`Siz (${product.brand || product.artikul}) dan ko'pi bilan ${availableToReturn} ${orderItem.unit} brak qaytara olasiz.`);
+          }
+
+          orderItem.defectQuantity = (orderItem.defectQuantity || 0) + returnItem.quantity;
+        }
 
         const { calculateQuantityInRolls } = require('../utils/unitConverter');
         const quantityInRolls = calculateQuantityInRolls(
@@ -445,6 +557,8 @@ exports.defectiveReturn = async (req, res) => {
 
       const returnDoc = new Return({
         warehouse,
+        order: targetOrder ? targetOrder._id : null,
+        customer: customer || null,
         items: processedItems,
         totalRefundAmount: totalRefundAmount || 0,
         totalRefundCost: calculatedTotalRefundCost,
@@ -455,13 +569,54 @@ exports.defectiveReturn = async (req, res) => {
       });
       await returnDoc.save({ session });
 
+      // Agar buyurtmaga biriktirilgan bo'lsa, buyurtmani saqlaymiz (pre-save hook totalAmount va debtAmount'ni yangilaydi)
+      if (targetOrder) {
+        targetOrder.notes = targetOrder.notes
+          ? `${targetOrder.notes} | Brak: ${returnDoc.returnNumber}`
+          : `Brak: ${returnDoc.returnNumber}`;
+        await targetOrder.save({ session });
+      }
+
       // ❌ Stock YANGILANMAYDI — brak mahsulot omborga qaytmaydi
+      
+      // Customer balance adjustment if customer is selected
+      const finalCustomerId = customer?._id || customer;
+      if (finalCustomerId && totalRefundAmount > 0) {
+        await Customer.findByIdAndUpdate(
+          finalCustomerId,
+          { 
+            $inc: { 
+              totalDebt: -returnDoc.totalRefundAmount, 
+              totalPurchased: -returnDoc.totalRefundAmount
+            } 
+          },
+          { session }
+        );
+        
+        await Customer.updateOne(
+          { _id: finalCustomerId, cashbackBalance: { $lt: 0 } },
+          { $set: { cashbackBalance: 0 } },
+          { session }
+        );
+      }
+      
+      syncDeltas = {
+        products: [],
+        customer: finalCustomerId ? {
+          id: finalCustomerId.toString(),
+          debtDelta: -returnDoc.totalRefundAmount,
+          purchasedDelta: -returnDoc.totalRefundAmount,
+          cashbackDelta: 0
+        } : null
+      };
 
       returnResult = returnDoc;
     });
 
     // ─── Side effects ───
     populatedReturn = await Return.findById(returnResult._id)
+      .populate('order', 'orderNumber')
+      .populate('customer', 'name phone')
       .populate('warehouse', 'name')
       .populate('items.product', 'brand artikul polka category');
 

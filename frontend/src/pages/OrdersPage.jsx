@@ -203,10 +203,13 @@ const OrdersPage = () => {
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono text-[14px] font-[700] text-primary">{order.orderNumber}</span>
-                            {order.notes && order.notes.includes('qaytarildi') && (
-                              <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-[700] uppercase tracking-wider">Vozvrat</span>
+                            {(order.items?.some(i => i.returnedQuantity > 0) || order.notes?.includes('Vozvrat') || order.notes?.includes('qaytarildi')) && (
+                              <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-[700] uppercase tracking-wider">↩ Vozvrat</span>
+                            )}
+                            {(order.items?.some(i => i.defectQuantity > 0) || order.notes?.includes('Brak')) && (
+                              <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-[700] uppercase tracking-wider">⚠ Brak</span>
                             )}
                           </div>
                           <div className="flex items-center gap-1.5 text-[12px] text-tertiary font-[500] mt-1">
@@ -245,41 +248,63 @@ const OrdersPage = () => {
                                   <thead className="bg-subtle/30">
                                     <tr>
                                       <th className="px-4 py-3 text-[11px] font-[600] text-tertiary uppercase">Mahsulot</th>
-                                      <th className="px-4 py-3 text-[11px] font-[600] text-tertiary uppercase text-right">Miqdor</th>
+                                      <th className="px-4 py-3 text-[11px] font-[600] text-tertiary uppercase text-center">Berilgan</th>
+                                      <th className="px-4 py-3 text-[11px] font-[600] text-amber-600 uppercase text-center">Vozvrat</th>
+                                      <th className="px-4 py-3 text-[11px] font-[600] text-red-600 uppercase text-center">Brak</th>
+                                      <th className="px-4 py-3 text-[11px] font-[600] text-emerald-600 uppercase text-center">Qoldiq</th>
                                       <th className="px-4 py-3 text-[11px] font-[600] text-tertiary uppercase text-right">Narx</th>
                                       <th className="px-4 py-3 text-[11px] font-[600] text-tertiary uppercase text-right">Jami</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-subtle">
-                                    {order.items.map((item, idx) => (
-                                      <tr key={idx}>
-                                        <td className="px-4 py-3 flex items-center gap-3">
-                                          <div className="w-10 h-10 rounded-xl bg-subtle border border-subtle overflow-hidden shrink-0">
-                                             {item.product?.images?.[0] ? (
-                                               <img src={item.product.images[0].url} className="w-full h-full object-cover" />
-                                             ) : (
-                                               <div className="w-full h-full flex items-center justify-center text-tertiary"><FileText className="w-4 h-4 opacity-50"/></div>
-                                             )}
-                                          </div>
-                                          <div className="flex flex-col">
-                                            <span className="font-[700] text-[13px] text-primary">{item.product?.name || item.product?.artikul}</span>
-                                            <span className="text-[11px] font-mono text-tertiary">{item.product?.artikul}</span>
-                                          </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                          <span className="text-[13px] font-[700] text-secondary">{item.quantity} {item.unit}</span>
-                                          {item.returnedQuantity > 0 && (
-                                            <div className="mt-1">
-                                              <span className="text-red-600 bg-red-50 text-[10px] font-[700] px-1.5 py-0.5 rounded-md border border-red-200">
-                                                -{item.returnedQuantity} qaytgan
-                                              </span>
+                                    {order.items.map((item, idx) => {
+                                      const activeQuantity = Math.max(0, item.quantity - (item.returnedQuantity || 0) - (item.defectQuantity || 0));
+                                      return (
+                                        <tr key={idx}>
+                                          <td className="px-4 py-3 flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-subtle border border-subtle overflow-hidden shrink-0">
+                                               {item.product?.images?.[0] ? (
+                                                 <img src={item.product.images[0].url} className="w-full h-full object-cover" />
+                                               ) : (
+                                                 <div className="w-full h-full flex items-center justify-center text-tertiary"><FileText className="w-4 h-4 opacity-50"/></div>
+                                               )}
                                             </div>
-                                          )}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-mono text-[13px] text-secondary">{formatPrice(item.unitPrice)}</td>
-                                        <td className="px-4 py-3 text-right font-mono font-[700] text-primary">{formatPrice(item.subtotal)}</td>
-                                      </tr>
-                                    ))}
+                                            <div className="flex flex-col">
+                                              <span className="font-[700] text-[13px] text-primary">{item.product?.name || item.product?.artikul}</span>
+                                              <span className="text-[11px] font-mono text-tertiary">{item.product?.artikul}</span>
+                                            </div>
+                                          </td>
+                                          <td className="px-4 py-3 text-center">
+                                            <span className="text-[13px] font-[600] text-primary">{item.quantity} {item.unit}</span>
+                                          </td>
+                                          <td className="px-4 py-3 text-center">
+                                            {item.returnedQuantity > 0 ? (
+                                              <span className="text-amber-700 bg-amber-50 text-[11px] font-[700] px-2 py-0.5 rounded-md border border-amber-200">
+                                                -{item.returnedQuantity}
+                                              </span>
+                                            ) : (
+                                              <span className="text-tertiary text-[12px]">—</span>
+                                            )}
+                                          </td>
+                                          <td className="px-4 py-3 text-center">
+                                            {item.defectQuantity > 0 ? (
+                                              <span className="text-red-700 bg-red-50 text-[11px] font-[700] px-2 py-0.5 rounded-md border border-red-200">
+                                                -{item.defectQuantity}
+                                              </span>
+                                            ) : (
+                                              <span className="text-tertiary text-[12px]">—</span>
+                                            )}
+                                          </td>
+                                          <td className="px-4 py-3 text-center">
+                                            <span className="text-[13px] font-[700] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                                              {activeQuantity} {item.unit}
+                                            </span>
+                                          </td>
+                                          <td className="px-4 py-3 text-right font-mono text-[13px] text-secondary">{formatPrice(item.unitPrice)}</td>
+                                          <td className="px-4 py-3 text-right font-mono font-[700] text-primary">{formatPrice(item.subtotal)}</td>
+                                        </tr>
+                                      );
+                                    })}
                                   </tbody>
                                 </table>
                               </div>
@@ -329,10 +354,13 @@ const OrdersPage = () => {
                     {/* Header: ID, Badge & Date */}
                     <div className="flex items-start justify-between w-full">
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[15px] font-[700] tracking-tight text-primary">{order.orderNumber}</span>
-                          {order.notes && order.notes.includes('qaytarildi') && (
-                            <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-[800] uppercase tracking-wider">Vozvrat</span>
+                          {(order.items?.some(i => i.returnedQuantity > 0) || order.notes?.includes('Vozvrat') || order.notes?.includes('qaytarildi')) && (
+                            <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-[800] uppercase tracking-wider">↩ Vozvrat</span>
+                          )}
+                          {(order.items?.some(i => i.defectQuantity > 0) || order.notes?.includes('Brak')) && (
+                            <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-[800] uppercase tracking-wider">⚠ Brak</span>
                           )}
                         </div>
                         <span className="text-[12px] font-[500] text-tertiary">{formatDateTime(order.createdAt)}</span>
@@ -387,27 +415,38 @@ const OrdersPage = () => {
                     <div className="border-t border-subtle bg-subtle/20 p-3.5 sm:p-5 flex flex-col gap-3 sm:gap-4">
                       
                       <div className="bg-surface rounded-xl sm:rounded-2xl border border-subtle shadow-sm overflow-hidden flex flex-col divide-y divide-subtle">
-                        {order.items.map((item, idx) => (
-                          <div key={idx} className="flex gap-3 p-3 sm:p-4">
-                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-subtle overflow-hidden shrink-0 border border-subtle flex items-center justify-center">
-                              {item.product?.images?.[0] ? <img src={item.product.images[0].url} className="w-full h-full object-cover" /> : <Package className="w-6 h-6 text-tertiary opacity-50" />}
-                            </div>
-                            <div className="flex flex-col flex-1 min-w-0 justify-center">
-                              <span className="text-[13px] sm:text-[14px] font-[700] text-primary truncate">{item.product?.name || item.product?.artikul}</span>
-                              <div className="flex justify-between items-center mt-1 sm:mt-1.5">
-                                <span className="text-[12px] font-[600] text-secondary">{item.quantity} {item.unit} <span className="text-tertiary font-normal ml-1">× {formatPrice(item.unitPrice)}</span></span>
-                                <span className="text-[13px] sm:text-[14px] font-[800] font-mono text-primary">{formatPrice(item.subtotal)}</span>
+                        {order.items.map((item, idx) => {
+                          const activeQuantity = Math.max(0, item.quantity - (item.returnedQuantity || 0) - (item.defectQuantity || 0));
+                          return (
+                            <div key={idx} className="flex gap-3 p-3 sm:p-4">
+                              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-subtle overflow-hidden shrink-0 border border-subtle flex items-center justify-center">
+                                {item.product?.images?.[0] ? <img src={item.product.images[0].url} className="w-full h-full object-cover" /> : <Package className="w-6 h-6 text-tertiary opacity-50" />}
                               </div>
-                              {item.returnedQuantity > 0 && (
-                                <div className="mt-1.5">
-                                  <span className="text-red-600 text-[10px] font-[700] bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
-                                    ↩ {item.returnedQuantity} ta qaytgan
+                              <div className="flex flex-col flex-1 min-w-0 justify-center">
+                                <span className="text-[13px] sm:text-[14px] font-[700] text-primary truncate">{item.product?.name || item.product?.artikul}</span>
+                                <div className="flex justify-between items-center mt-1 sm:mt-1.5">
+                                  <span className="text-[12px] font-[600] text-secondary">Berilgan: {item.quantity} {item.unit} <span className="text-tertiary font-normal ml-1">× {formatPrice(item.unitPrice)}</span></span>
+                                  <span className="text-[13px] sm:text-[14px] font-[800] font-mono text-primary">{formatPrice(item.subtotal)}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                  {item.returnedQuantity > 0 && (
+                                    <span className="text-amber-700 text-[10px] font-[700] bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                      ↩ {item.returnedQuantity} qaytgan
+                                    </span>
+                                  )}
+                                  {item.defectQuantity > 0 && (
+                                    <span className="text-red-700 text-[10px] font-[700] bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                                      ⚠ {item.defectQuantity} brak
+                                    </span>
+                                  )}
+                                  <span className="text-emerald-700 text-[10px] font-[700] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                    Qoldiq: {activeQuantity} {item.unit}
                                   </span>
                                 </div>
-                              )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       {order.notes && (
