@@ -79,6 +79,11 @@ const returnSchema = new mongoose.Schema({
     enum: ['completed', 'cancelled'],
     default: 'completed',
   },
+  returnType: {
+    type: String,
+    enum: ['standard', 'defective'],
+    default: 'standard',
+  },
   processedBy: {
     type: String, // Kassir ismi
   },

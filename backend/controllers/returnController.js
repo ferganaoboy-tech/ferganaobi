@@ -384,3 +384,95 @@ exports.quickReturn = async (req, res) => {
     await session.endSession();
   }
 };
+
+// Brak (nosoz) mahsulot vozvrati — ombor OSHMAYDI, yozuv saqlanadi
+exports.defectiveReturn = async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    let { items, totalRefundAmount, reason, warehouse } = req.body;
+    const io = req.app.get('io');
+
+    if (req.user && req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      warehouse = req.user.warehouse;
+    }
+
+    let returnResult;
+    let populatedReturn;
+
+    const syncDeltas = { products: [], customer: null };
+
+    await session.withTransaction(async () => {
+      let processedItems = [];
+      let calculatedTotalRefundCost = 0;
+
+      for (let returnItem of items) {
+        const product = await Product.findById(returnItem.product).session(session);
+        if (!product) throw new Error('Mahsulot topilmadi');
+
+        const { calculateQuantityInRolls } = require('../utils/unitConverter');
+        const quantityInRolls = calculateQuantityInRolls(
+          returnItem.unit,
+          returnItem.quantity,
+          product
+        );
+
+        const itemCost = (product.costPrice || 0) * returnItem.quantity;
+        calculatedTotalRefundCost = Math.round(calculatedTotalRefundCost + itemCost);
+
+        processedItems.push({
+          product: returnItem.product,
+          unit: returnItem.unit,
+          quantity: returnItem.quantity,
+          quantityInRolls,
+          unitPrice: returnItem.unitPrice || product.pricePerRoll,
+          discount: 0,
+          refundAmount: returnItem.refundAmount || 0,
+          unitCost: product.costPrice || 0,
+          unitCostUsd: product.costPriceUsd || 0
+        });
+      }
+
+      if (processedItems.length === 0) {
+        throw new Error('Qaytariladigan mahsulotlar yaroqsiz');
+      }
+
+      const returnDoc = new Return({
+        warehouse,
+        items: processedItems,
+        totalRefundAmount: totalRefundAmount || 0,
+        totalRefundCost: calculatedTotalRefundCost,
+        reason: reason || 'Brak mahsulot',
+        returnType: 'defective',
+        processedBy: req.user ? req.user.name : 'Tizim',
+        processedById: req.user ? req.user._id : null
+      });
+      await returnDoc.save({ session });
+
+      // ❌ Stock YANGILANMAYDI — brak mahsulot omborga qaytmaydi
+
+      returnResult = returnDoc;
+    });
+
+    // ─── Side effects ───
+    populatedReturn = await Return.findById(returnResult._id)
+      .populate('warehouse', 'name')
+      .populate('items.product', 'brand artikul polka category');
+
+    const whId = returnResult.warehouse?._id || returnResult.warehouse;
+    io.to(whId.toString()).emit('return:created', { returnDoc: populatedReturn, syncDeltas });
+
+    const { clearDashboardCache } = require('../controllers/orderController');
+    clearDashboardCache();
+
+    await logAction(
+      req, 'RETURN', 'Return', returnResult._id,
+      `Brak vozvrat: ${returnResult.returnNumber}`
+    );
+
+    res.status(201).json({ success: true, data: populatedReturn });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  } finally {
+    await session.endSession();
+  }
+};
