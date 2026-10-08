@@ -141,6 +141,8 @@ export const useSocketConnection = () => {
     const onReturnCreated = (data) => {
       if (data?.syncDeltas) applySyncDeltas(queryClient, data.syncDeltas);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orderStats'] });
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['debtors'] });
