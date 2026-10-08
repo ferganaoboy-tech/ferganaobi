@@ -9,7 +9,7 @@ const { logAction } = require('../utils/logger');
 exports.createReturn = async (req, res) => {
   const session = await mongoose.startSession();
   try {
-    const { orderId, items, reason } = req.body;
+    const { orderId, items, reason, returnType = 'standard' } = req.body;
     const io = req.app.get('io');
 
     let returnResult;
@@ -55,7 +55,7 @@ exports.createReturn = async (req, res) => {
           throw new Error('Maxsulot buyurtmada topilmadi');
         }
 
-        const availableToReturn = orderItem.quantity - (orderItem.returnedQuantity || 0);
+        const availableToReturn = orderItem.quantity - (orderItem.returnedQuantity || 0) - (orderItem.defectQuantity || 0);
         if (returnItem.quantity > availableToReturn) {
           throw new Error(
             `Siz faqat ${availableToReturn} ta ${orderItem.unit} qaytara olasiz.`
@@ -75,8 +75,12 @@ exports.createReturn = async (req, res) => {
         const itemCost = (orderItem.unitCost || 0) * returnItem.quantity;
         totalRefundCost = Math.round(totalRefundCost + itemCost);
 
-        // returnedQuantity yangilaymiz (order saqlanganda hisob-kitob bo'ladi)
-        orderItem.returnedQuantity = (orderItem.returnedQuantity || 0) + returnItem.quantity;
+        // returnedQuantity yoki defectQuantity yangilaymiz
+        if (returnType === 'defective') {
+          orderItem.defectQuantity = (orderItem.defectQuantity || 0) + returnItem.quantity;
+        } else {
+          orderItem.returnedQuantity = (orderItem.returnedQuantity || 0) + returnItem.quantity;
+        }
 
         const { calculateQuantityInRolls } = require('../utils/unitConverter');
         const quantityInRolls = calculateQuantityInRolls(
@@ -107,17 +111,20 @@ exports.createReturn = async (req, res) => {
         totalRefundAmount,
         totalRefundCost,
         reason,
+        returnType,
         processedBy: req.user ? req.user.name : 'Tizim',
         processedById: req.user ? req.user._id : null
       }], { session });
 
       // 4. Stock qaytarish — atomic $inc
-      for (let item of processedItems) {
-        await Product.findByIdAndUpdate(
-          item.product,
-          { $inc: { quantity: item.quantityInRolls, soldQuantity: -item.quantityInRolls } },
-          { session }
-        );
+      if (returnType !== 'defective') {
+        for (let item of processedItems) {
+          await Product.findByIdAndUpdate(
+            item.product,
+            { $inc: { quantity: item.quantityInRolls, soldQuantity: -item.quantityInRolls } },
+            { session }
+          );
+        }
       }
 
       // 5. Order'ni yangilash (pre-save hook totalAmount va debtAmount'ni qayta hisoblaydi)
