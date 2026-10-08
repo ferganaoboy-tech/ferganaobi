@@ -19,7 +19,8 @@ import {
   Package,
   RefreshCcw,
   LogOut,
-  BarChart2
+  BarChart2,
+  AlertTriangle
 } from "lucide-react";
 import { useDebtors } from "../hooks/useCustomers";
 import { useAuth } from "../contexts/AuthContext";
@@ -27,6 +28,8 @@ import { useCurrentShift } from "../hooks/useShifts";
 import { useShiftEnabled } from "../hooks/useSettings";
 import { useCart } from "../contexts/CartContext";
 import ShiftModal from "./ShiftModal";
+import QuickReturnModal from "./QuickReturnModal";
+import BrakReturnModal from "./BrakReturnModal";
 import toast from "react-hot-toast";
 import { useQuery } from "@tanstack/react-query";
 import api from "../api";
@@ -43,6 +46,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const { totalCount, setCartOpen } = useCart();
 
   const [isShiftModalOpen, setIsShiftModalOpen] = React.useState(false);
+  const [isQuickReturnOpen, setIsQuickReturnOpen] = React.useState(false);
+  const [isBrakReturnOpen, setIsBrakReturnOpen] = React.useState(false);
 
   const { data: transfersCountRes } = useQuery({
     queryKey: ['transfers-count'],
@@ -98,6 +103,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           label: "Qarzlar",
           badge: debtorsCount > 0 ? debtorsCount : null,
         },
+        { isAction: true, action: 'quickReturn', icon: RefreshCcw, label: "Tezkor Vozvrat" },
+        { isAction: true, action: 'brakReturn', icon: AlertTriangle, label: "Brak Vozvrat" },
       ],
     },
     {
@@ -199,6 +206,30 @@ const Sidebar = ({ isOpen, onClose }) => {
                   );
                 }
 
+                if (item.isAction) {
+                  const isWarning = item.action === 'brakReturn';
+                  return (
+                    <button
+                      key={item.action}
+                      onClick={() => {
+                        if (item.action === 'quickReturn') setIsQuickReturnOpen(true);
+                        if (item.action === 'brakReturn') setIsBrakReturnOpen(true);
+                        onClose();
+                      }}
+                      className={`w-full flex items-center justify-between px-3 h-9 transition-colors group border-l-2 border-transparent cursor-pointer text-left ${
+                        isWarning
+                          ? 'text-state-warning-text hover:bg-state-warning-bg/30'
+                          : 'text-secondary hover:bg-subtle hover:text-primary'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <item.icon className="w-[16px] h-[16px]" strokeWidth={1.5} />
+                        <span className="text-[13px] font-[500]">{item.label}</span>
+                      </div>
+                    </button>
+                  );
+                }
+
                 return (
                   <NavLink
                     key={item.to}
@@ -288,6 +319,16 @@ const Sidebar = ({ isOpen, onClose }) => {
         mode="close" 
         currentShift={currentShift}
         onClose={() => setIsShiftModalOpen(false)} 
+      />
+
+      <QuickReturnModal
+        isOpen={isQuickReturnOpen}
+        onClose={() => setIsQuickReturnOpen(false)}
+      />
+
+      <BrakReturnModal
+        isOpen={isBrakReturnOpen}
+        onClose={() => setIsBrakReturnOpen(false)}
       />
     </>
   );

@@ -182,6 +182,7 @@ export const deletePayment           = (id)     => api.delete(`/payments/${id}`)
 
 // ─── Returns API ──────────────────────────────────────────────────────────────
 export const fetchReturns     = (params) => api.get('/returns', { params }).then(extractData);
+export const createDefectiveReturn = (data) => api.post('/returns/defective', data).then(extractData);
 export const createReturn     = (data)   => api.post('/returns', data).then(extractData);
 export const createQuickReturn = (data)  => api.post('/returns/quick', data).then(extractData);
 

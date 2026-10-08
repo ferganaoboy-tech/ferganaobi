@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchReturns, createReturn, createQuickReturn } from '../api';
+import { fetchReturns, createReturn, createQuickReturn, createDefectiveReturn } from '../api';
 
 export const useReturns = (params) => {
   return useQuery({
@@ -34,6 +34,18 @@ export const useCreateQuickReturn = () => {
       queryClient.invalidateQueries({ queryKey: ['orderStats'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['debtors'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+};
+
+export const useCreateDefectiveReturn = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createDefectiveReturn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
